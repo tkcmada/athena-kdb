@@ -184,6 +184,9 @@ public abstract class JdbcSplitQueryBuilder
             if (partitionSplit.containsKey(column.getName())) {
                 continue; // Ignore constraints on partition name as RDBMS does not contain these as columns. Presto will filter these values.
             }
+            if ("name".equals(column.getName())) {
+                continue;
+            }
             ArrowType type = column.getType();
             if (constraints.getSummary() != null && !constraints.getSummary().isEmpty()) {
                 ValueSet valueSet = constraints.getSummary().get(column.getName());
