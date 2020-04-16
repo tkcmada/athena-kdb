@@ -23,6 +23,7 @@ import com.amazonaws.connectors.athena.jdbc.connection.DatabaseConnectionConfig;
 import com.amazonaws.connectors.athena.jdbc.connection.DatabaseConnectionConfigBuilder;
 import com.amazonaws.connectors.athena.jdbc.connection.JdbcConnectionFactory;
 import com.amazonaws.connectors.athena.jdbc.kdb.KdbMetadataHandler;
+import com.amazonaws.connectors.athena.jdbc.kdb.KdbRecordHandler;
 import com.amazonaws.connectors.athena.jdbc.mysql.MySqlMetadataHandler;
 import com.amazonaws.connectors.athena.jdbc.mysql.MySqlRecordHandler;
 import com.amazonaws.connectors.athena.jdbc.postgresql.PostGreSqlMetadataHandler;
@@ -150,6 +151,8 @@ public final class JDBCUtil
     private static JdbcRecordHandler createJdbcRecordHandler(final DatabaseConnectionConfig databaseConnectionConfig)
     {
         switch (databaseConnectionConfig.getType()) {
+            case KDB:
+                return new KdbRecordHandler(databaseConnectionConfig);
             case MYSQL:
                 return new MySqlRecordHandler(databaseConnectionConfig);
             case REDSHIFT:
