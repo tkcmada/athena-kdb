@@ -101,6 +101,9 @@ public class GenericJdbcConnectionFactory
 
             // register driver
             Class.forName(databaseConnectionInfo.getDriverClassName()).newInstance();
+            
+            LOGGER.info("getConnection " + derivedJdbcString);
+            LOGGER.info("jdbcProperties=" + (jdbcProperties == null ? "null" : jdbcProperties.toString()));
 
             // create connection
             return DriverManager.getConnection(derivedJdbcString, this.jdbcProperties);
