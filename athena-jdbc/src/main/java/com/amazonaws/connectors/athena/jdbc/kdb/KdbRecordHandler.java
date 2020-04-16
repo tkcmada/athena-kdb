@@ -19,9 +19,15 @@
  */
 package com.amazonaws.connectors.athena.jdbc.kdb;
 
+import com.amazonaws.athena.connector.lambda.QueryStatusChecker;
+import com.amazonaws.athena.connector.lambda.data.Block;
+import com.amazonaws.athena.connector.lambda.data.BlockSpiller;
+import com.amazonaws.athena.connector.lambda.data.writers.GeneratedRowWriter;
+import com.amazonaws.athena.connector.lambda.data.writers.extractors.Extractor;
 import com.amazonaws.athena.connector.lambda.domain.Split;
 import com.amazonaws.athena.connector.lambda.domain.TableName;
 import com.amazonaws.athena.connector.lambda.domain.predicate.Constraints;
+import com.amazonaws.athena.connector.lambda.records.ReadRecordsRequest;
 import com.amazonaws.connectors.athena.jdbc.connection.DatabaseConnectionConfig;
 import com.amazonaws.connectors.athena.jdbc.connection.GenericJdbcConnectionFactory;
 import com.amazonaws.connectors.athena.jdbc.connection.JdbcConnectionFactory;
@@ -35,6 +41,8 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.secretsmanager.AWSSecretsManager;
 import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder;
 import com.google.common.annotations.VisibleForTesting;
+
+import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
@@ -42,7 +50,9 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Map;
 
 /**
  * Data handler, user must have necessary permissions to read from necessary tables.
@@ -91,4 +101,43 @@ public class KdbRecordHandler
 
         return preparedStatement;
     }
+
+    @Override
+    public void readWithConstraint(BlockSpiller blockSpiller, ReadRecordsRequest readRecordsRequest, QueryStatusChecker queryStatusChecker)
+    {
+        LOGGER.info("{}: Catalog: {}, table {}, splits {}", readRecordsRequest.getQueryId(), readRecordsRequest.getCatalogName(), readRecordsRequest.getTableName(),
+                readRecordsRequest.getSplit().getProperties());
+        try (Connection connection = jdbcConnectionFactory.getConnection(getCredentialProvider())) {
+            connection.setAutoCommit(false); // For consistency. This is needed to be false to enable streaming for some database types.
+            try (PreparedStatement preparedStatement = buildSplitSql(connection, readRecordsRequest.getCatalogName(), readRecordsRequest.getTableName(),
+                    readRecordsRequest.getSchema(), readRecordsRequest.getConstraints(), readRecordsRequest.getSplit());
+                    ResultSet resultSet = preparedStatement.executeQuery()) {
+                Map<String, String> partitionValues = readRecordsRequest.getSplit().getProperties();
+
+                GeneratedRowWriter.RowWriterBuilder rowWriterBuilder = GeneratedRowWriter.newBuilder(readRecordsRequest.getConstraints());
+                for (Field next : readRecordsRequest.getSchema().getFields()) {
+                    Extractor extractor = makeExtractor(next, resultSet, partitionValues);
+                    rowWriterBuilder.withExtractor(next.getName(), extractor);
+                }
+
+                GeneratedRowWriter rowWriter = rowWriterBuilder.build();
+                int rowsReturnedFromDatabase = 0;
+                while (resultSet.next()) {
+                    if (!queryStatusChecker.isQueryRunning()) {
+                        return;
+                    }
+                    blockSpiller.writeRows((Block block, int rowNum) -> rowWriter.writeRow(block, rowNum, resultSet) ? 1 : 0);
+                    rowsReturnedFromDatabase++;
+                }
+                LOGGER.info("{} rows returned by database.", rowsReturnedFromDatabase);
+
+                connection.commit();
+            }
+        }
+        catch (SQLException sqlException) {
+            throw new RuntimeException(sqlException.getErrorCode() + ": " + sqlException.getMessage(), sqlException);
+        }
+    }
+
+
 }

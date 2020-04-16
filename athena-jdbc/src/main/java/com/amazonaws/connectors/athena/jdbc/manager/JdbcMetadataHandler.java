@@ -135,7 +135,7 @@ public abstract class JdbcMetadataHandler
         }
     }
 
-    private Set<String> listDatabaseNames(final Connection jdbcConnection)
+    protected Set<String> listDatabaseNames(final Connection jdbcConnection)
             throws SQLException
     {
         try (ResultSet resultSet = jdbcConnection.getMetaData().getSchemas()) {
@@ -163,7 +163,7 @@ public abstract class JdbcMetadataHandler
         }
     }
 
-    private List<TableName> listTables(final Connection jdbcConnection, final String databaseName)
+    protected List<TableName> listTables(final Connection jdbcConnection, final String databaseName)
             throws SQLException
     {
         try (ResultSet resultSet = getTables(jdbcConnection, databaseName)) {
@@ -221,7 +221,7 @@ public abstract class JdbcMetadataHandler
         }
     }
 
-    private Schema getSchema(Connection jdbcConnection, TableName tableName, Schema partitionSchema)
+    protected Schema getSchema(Connection jdbcConnection, TableName tableName, Schema partitionSchema)
             throws SQLException
     {
         SchemaBuilder schemaBuilder = SchemaBuilder.newBuilder();

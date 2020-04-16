@@ -85,7 +85,7 @@ public abstract class JdbcRecordHandler
 {
     public static final org.joda.time.MutableDateTime EPOCH = new org.joda.time.MutableDateTime();
     private static final Logger LOGGER = LoggerFactory.getLogger(JdbcRecordHandler.class);
-    private final JdbcConnectionFactory jdbcConnectionFactory;
+    protected final JdbcConnectionFactory jdbcConnectionFactory;
     private final DatabaseConnectionConfig databaseConnectionConfig;
 
     /**
@@ -106,7 +106,7 @@ public abstract class JdbcRecordHandler
         this.databaseConnectionConfig = Validate.notNull(databaseConnectionConfig, "databaseConnectionConfig must not be null");
     }
 
-    private JdbcCredentialProvider getCredentialProvider()
+    protected JdbcCredentialProvider getCredentialProvider()
     {
         final String secretName = this.databaseConnectionConfig.getSecret();
         if (StringUtils.isNotBlank(secretName)) {
@@ -156,7 +156,7 @@ public abstract class JdbcRecordHandler
     /**
      * Creates an Extractor for the given field. In this example the extractor just creates some random data.
      */
-    private Extractor makeExtractor(Field field, ResultSet resultSet, Map<String, String> partitionValues)
+    protected Extractor makeExtractor(Field field, ResultSet resultSet, Map<String, String> partitionValues)
     {
         Types.MinorType fieldType = Types.getMinorTypeForArrowType(field.getType());
 
