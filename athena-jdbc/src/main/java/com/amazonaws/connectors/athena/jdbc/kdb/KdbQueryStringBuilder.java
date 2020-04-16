@@ -43,12 +43,12 @@ public class KdbQueryStringBuilder
     protected String getFromClauseWithSplit(String catalog, String schema, String table, Split split)
     {
         StringBuilder tableName = new StringBuilder();
-        if (!Strings.isNullOrEmpty(catalog)) {
-            tableName.append(quote(catalog)).append('.');
-        }
-        if (!Strings.isNullOrEmpty(schema)) {
-            tableName.append(quote(schema)).append('.');
-        }
+        // if (!Strings.isNullOrEmpty(catalog)) {
+        //     tableName.append(quote(catalog)).append('.');
+        // }
+        // if (!Strings.isNullOrEmpty(schema)) {
+        //     tableName.append(quote(schema)).append('.');
+        // }
         tableName.append(quote(table));
 
         String partitionName = split.getProperty(KdbMetadataHandler.BLOCK_PARTITION_COLUMN_NAME);
@@ -65,5 +65,11 @@ public class KdbQueryStringBuilder
     protected List<String> getPartitionWhereClauses(final Split split)
     {
         return Collections.emptyList();
+    }
+
+    @Override
+    protected String quote(String name)
+    {
+        return name;
     }
 }
