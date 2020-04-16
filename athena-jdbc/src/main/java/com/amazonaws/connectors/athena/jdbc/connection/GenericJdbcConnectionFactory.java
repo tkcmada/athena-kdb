@@ -44,6 +44,9 @@ public class GenericJdbcConnectionFactory
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(GenericJdbcConnectionFactory.class);
 
+    private static final String KDB_DRIVER_CLASS = "jdbc";
+    private static final int KDB_DEFAULT_PORT = 5001;
+
     private static final String MYSQL_DRIVER_CLASS = "com.mysql.cj.jdbc.Driver";
     private static final int MYSQL_DEFAULT_PORT = 3306;
 
@@ -57,6 +60,7 @@ public class GenericJdbcConnectionFactory
     public static final Pattern SECRET_NAME_PATTERN = Pattern.compile(SECRET_NAME_PATTERN_STRING);
 
     private static final ImmutableMap<DatabaseEngine, DatabaseConnectionInfo> CONNECTION_INFO = ImmutableMap.of(
+            DatabaseEngine.KDB, new DatabaseConnectionInfo(KDB_DRIVER_CLASS, KDB_DEFAULT_PORT),
             DatabaseEngine.MYSQL, new DatabaseConnectionInfo(MYSQL_DRIVER_CLASS, MYSQL_DEFAULT_PORT),
             DatabaseEngine.POSTGRES, new DatabaseConnectionInfo(POSTGRESQL_DRIVER_CLASS, POSTGRESQL_DEFAULT_PORT),
             DatabaseEngine.REDSHIFT, new DatabaseConnectionInfo(REDSHIFT_DRIVER_CLASS, REDSHIFT_DEFAULT_PORT));
