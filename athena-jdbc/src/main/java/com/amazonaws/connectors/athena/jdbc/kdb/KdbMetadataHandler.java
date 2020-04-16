@@ -163,8 +163,8 @@ public class KdbMetadataHandler
         //         throw new RuntimeException("Could not find table in " + tableName.getSchemaName());
         //     }
 
-        //     // add partition columns
-        //     partitionSchema.getFields().forEach(schemaBuilder::addField);
+            // add partition columns
+            partitionSchema.getFields().forEach(schemaBuilder::addField);
 
             return schemaBuilder.build();
         // }
