@@ -44,6 +44,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import org.apache.arrow.vector.complex.reader.FieldReader;
+import org.apache.arrow.vector.types.DateUnit;
+import org.apache.arrow.vector.types.TimeUnit;
 import org.apache.arrow.vector.types.Types;
 import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Schema;
@@ -141,6 +143,31 @@ public class KdbMetadataHandler
         SchemaBuilder schemaBuilder = SchemaBuilder.newBuilder();
         schemaBuilder.addIntField("x");
         schemaBuilder.addFloat8Field("f");
+        schemaBuilder.addStringField("s");
+        schemaBuilder.addField("d", new ArrowType.Date(DateUnit.DAY));
+        schemaBuilder.addField("t", new ArrowType.Time(TimeUnit.NANOSECOND, 12));
+        schemaBuilder.addField("z", new ArrowType.Timestamp(TimeUnit.NANOSECOND, "UTC"));
+
+// q)(2i;2.3;`qwe;2000.01.02;12:34:56.000;2000.01.02D12:34:56.000000000)
+// (2i;2.3;`qwe;2000.01.02;12:34:56.000;2000.01.02D12:34:56.000000000)
+
+// q)t
+// x f   s   d          t            z                            
+// ---------------------------------------------------------------
+// 2 2.3 qwe 2000.01.02 12:34:56.000 2000.01.02D12:34:56.000000000
+// q)metat
+// 'metat
+//   [0]  metat
+//        ^
+// q)meta t
+// c| t f a
+// -| -----
+// x| i    
+// f| f    
+// s| s    
+// d| d    
+// t| t    
+// z| p    
 
         // try (ResultSet resultSet = getColumns(jdbcConnection.getCatalog(), tableName, jdbcConnection.getMetaData())) {
         //     boolean found = false;
