@@ -145,7 +145,7 @@ public class KdbMetadataHandler
         schemaBuilder.addFloat8Field("f");
         schemaBuilder.addStringField("s");
         schemaBuilder.addField("d", new ArrowType.Date(DateUnit.DAY));
-        schemaBuilder.addField("t", new ArrowType.Time(TimeUnit.NANOSECOND, 12));
+        schemaBuilder.addField("t", new ArrowType.Time(TimeUnit.NANOSECOND, 128)); //only 8, 16, 32, 64, or 128 bits supported
         schemaBuilder.addField("z", new ArrowType.Timestamp(TimeUnit.NANOSECOND, "UTC"));
 
 // q)(2i;2.3;`qwe;2000.01.02;12:34:56.000;2000.01.02D12:34:56.000000000)
