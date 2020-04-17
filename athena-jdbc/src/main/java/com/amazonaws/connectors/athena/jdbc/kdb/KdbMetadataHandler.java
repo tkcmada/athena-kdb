@@ -140,6 +140,7 @@ public class KdbMetadataHandler
     protected Schema getSchema(Connection jdbcConnection, TableName tableName, Schema partitionSchema)
             throws SQLException
     {
+        LOGGER.info("getSchema...");
         SchemaBuilder schemaBuilder = SchemaBuilder.newBuilder();
         schemaBuilder.addIntField("x");
         schemaBuilder.addFloat8Field("f");
