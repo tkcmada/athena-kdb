@@ -104,9 +104,13 @@ public class KdbMetadataHandlerTest
         schemaBuilder.addFloat8Field("f");
         schemaBuilder.addStringField("s");
         schemaBuilder.addField("d", new ArrowType.Date(DateUnit.DAY));
-        schemaBuilder.addField("t", new ArrowType.Time(TimeUnit.NANOSECOND, 128)); //only 8, 16, 32, 64, or 128 bits supported
-        schemaBuilder.addField("z", new ArrowType.Timestamp(TimeUnit.NANOSECOND, "UTC"));
-        schemaBuilder.build();
+        // schemaBuilder.addField("t", new ArrowType.Time(TimeUnit.NANOSECOND, 128)); // Detected unsupported type[Time(NANOSECOND, 128) / TIMENANO for column[t]
+        // schemaBuilder.addField("z", new ArrowType.Timestamp(TimeUnit.NANOSECOND, "UTC")); // Detected unsupported type[Timestamp(NANOSECOND, UTC) / TIMESTAMPNANOTZ for column[z]
+        Schema schema = schemaBuilder.build();
+
+        for (Field next : schema.getFields()) {
+             com.amazonaws.athena.connector.lambda.data.SupportedTypes.assertSupported(next);
+        }
     }
 
     // @Test
