@@ -122,7 +122,6 @@ public abstract class JdbcSplitQueryBuilder
         // TODO all types, converts Arrow values to JDBC.
         for (int i = 0; i < accumulator.size(); i++) {
             TypeAndValue typeAndValue = accumulator.get(i);
-
             Types.MinorType minorTypeForArrowType = Types.getMinorTypeForArrowType(typeAndValue.getType());
 
             switch (minorTypeForArrowType) {
@@ -177,7 +176,7 @@ public abstract class JdbcSplitQueryBuilder
 
     protected abstract List<String> getPartitionWhereClauses(final Split split);
 
-    private List<String> toConjuncts(List<Field> columns, Constraints constraints, List<TypeAndValue> accumulator, Map<String, String> partitionSplit)
+    protected List<String> toConjuncts(List<Field> columns, Constraints constraints, List<TypeAndValue> accumulator, Map<String, String> partitionSplit)
     {
         List<String> conjuncts = new ArrayList<>();
         for (Field column : columns) {
@@ -195,7 +194,7 @@ public abstract class JdbcSplitQueryBuilder
         return conjuncts;
     }
 
-    private String toPredicate(String columnName, ValueSet valueSet, ArrowType type, List<TypeAndValue> accumulator)
+    protected String toPredicate(String columnName, ValueSet valueSet, ArrowType type, List<TypeAndValue> accumulator)
     {
         List<String> disjuncts = new ArrayList<>();
         List<Object> singleValues = new ArrayList<>();
@@ -285,23 +284,23 @@ public abstract class JdbcSplitQueryBuilder
         return quoteCharacters + name + quoteCharacters;
     }
 
-    private static class TypeAndValue
+    protected static class TypeAndValue
     {
         private final ArrowType type;
         private final Object value;
 
-        TypeAndValue(ArrowType type, Object value)
+        public TypeAndValue(ArrowType type, Object value)
         {
             this.type = Validate.notNull(type, "type is null");
             this.value = Validate.notNull(value, "value is null");
         }
 
-        ArrowType getType()
+        public ArrowType getType()
         {
             return type;
         }
 
-        Object getValue()
+        public Object getValue()
         {
             return value;
         }

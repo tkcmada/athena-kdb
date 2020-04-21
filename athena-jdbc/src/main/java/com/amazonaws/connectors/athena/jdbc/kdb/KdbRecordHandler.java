@@ -73,7 +73,7 @@ public class KdbRecordHandler
      */
     public KdbRecordHandler()
     {
-        this(JDBCUtil.getSingleDatabaseConfigFromEnv(JdbcConnectionFactory.DatabaseEngine.MYSQL));
+        this(JDBCUtil.getSingleDatabaseConfigFromEnv(JdbcConnectionFactory.DatabaseEngine.KDB));
     }
 
     public KdbRecordHandler(final DatabaseConnectionConfig databaseConnectionConfig)
@@ -88,14 +88,17 @@ public class KdbRecordHandler
     {
         super(amazonS3, secretsManager, athena, databaseConnectionConfig, jdbcConnectionFactory);
         this.jdbcSplitQueryBuilder = Validate.notNull(jdbcSplitQueryBuilder, "query builder must not be null");
+        LOGGER.info("jdbcSplitQueryBuilder:" + jdbcSplitQueryBuilder.getClass().getName());
     }
 
     @Override
     public PreparedStatement buildSplitSql(Connection jdbcConnection, String catalogName, TableName tableName, Schema schema, Constraints constraints, Split split)
             throws SQLException
     {
+        LOGGER.info("constraints:" + (String.valueOf(constraints)));
+        LOGGER.info("split:" + (String.valueOf(split)));
         PreparedStatement preparedStatement = jdbcSplitQueryBuilder.buildSql(jdbcConnection, null, tableName.getSchemaName(), tableName.getTableName(), schema, constraints, split);
-
+LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
         // Disable fetching all rows.
         preparedStatement.setFetchSize(Integer.MIN_VALUE);
 
