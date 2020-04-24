@@ -184,19 +184,19 @@ public class KdbMetadataHandler
                         case 'f':
                             schemaBuilder.addFloat8Field(colname);
                             break;
-                        case 'c':
-                            schemaBuilder.addTinyIntField(colname); //TODO : character is preffered
-                            break;
-                        case 's':
+                        // case 'c': //char is out of support
+                        //     schemaBuilder.addTinyIntField(colname); //This causes Character to Byte cast error.
+                        //     break;
+                        case 's': //symbol
                             schemaBuilder.addStringField(colname);
                             break;
                         case 'p': //timestamp
-                            // schemaBuilder.addField("z", new ArrowType.Timestamp(TimeUnit.NANOSECOND, "UTC"));
-                            schemaBuilder.addDateMilliField(colname);
+                            // schemaBuilder.addDateMilliField(colname); //works only for mills.
+                            schemaBuilder.addField(colname, Types.MinorType.TIMESTAMPNANO.getType());
                             break;
-                        case 't': //time
-                            // schemaBuilder.addField("t", new ArrowType.Time(TimeUnit.NANOSECOND, 128)); //only 8, 16, 32, 64, or 128 bits supported
-                            // schemaBuilder.addtimeDateMilliField(colname);
+                        case 't': //time is out of support
+                        //     // schemaBuilder.addField("t", new ArrowType.Time(TimeUnit.NANOSECOND, 128)); //only 8, 16, 32, 64, or 128 bits supported
+                            schemaBuilder.addField(colname, Types.MinorType.TIMENANO.getType());                        
                             break;
                         case 'd':
                             schemaBuilder.addDateDayField(colname);
