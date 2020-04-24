@@ -148,10 +148,27 @@ public class KdbMetadataHandler
                 resultSet.getString("TABLE_NAME"));
     }
 
+
     @Override
     protected Schema getSchema(Connection jdbcConnection, TableName tableName, Schema partitionSchema)
             throws SQLException
     {
+        //only following are supported in Athena
+    // BIT(Types.MinorType.BIT),
+    // DATEMILLI(Types.MinorType.DATEMILLI),
+    // DATEDAY(Types.MinorType.DATEDAY),
+    // FLOAT8(Types.MinorType.FLOAT8),
+    // FLOAT4(Types.MinorType.FLOAT4),
+    // INT(Types.MinorType.INT),
+    // TINYINT(Types.MinorType.TINYINT),
+    // SMALLINT(Types.MinorType.SMALLINT),
+    // BIGINT(Types.MinorType.BIGINT),
+    // VARBINARY(Types.MinorType.VARBINARY),
+    // DECIMAL(Types.MinorType.DECIMAL),
+    // VARCHAR(Types.MinorType.VARCHAR),
+    // STRUCT(Types.MinorType.STRUCT),
+    // LIST(Types.MinorType.LIST);
+
         LOGGER.info("getSchema...");
         SchemaBuilder schemaBuilder = SchemaBuilder.newBuilder();
         try ( Statement stmt = jdbcConnection.createStatement() ) {
@@ -191,13 +208,13 @@ public class KdbMetadataHandler
                             schemaBuilder.addStringField(colname);
                             break;
                         case 'p': //timestamp
-                            // schemaBuilder.addDateMilliField(colname); //works only for mills.
-                            schemaBuilder.addField(colname, Types.MinorType.TIMESTAMPNANO.getType());
+                            schemaBuilder.addDateMilliField(colname); //works only for mills.
+                            // schemaBuilder.addField(colname, Types.MinorType.TIMESTAMPNANO.getType()); // -> [Detected unsupported type[Timestamp(NANOSECOND, null) / TIMESTAMPNANO for column[z]]
                             break;
-                        case 't': //time is out of support
+                        // case 't': //time is out of support
                         //     // schemaBuilder.addField("t", new ArrowType.Time(TimeUnit.NANOSECOND, 128)); //only 8, 16, 32, 64, or 128 bits supported
-                            schemaBuilder.addField(colname, Types.MinorType.TIMENANO.getType());                        
-                            break;
+                        //     // schemaBuilder.addField(colname, Types.MinorType.TIMENANO.getType()); //TIMENANO is not supported in Athena
+                        //     break;
                         case 'd':
                             schemaBuilder.addDateDayField(colname);
                             break;
