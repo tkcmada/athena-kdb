@@ -190,16 +190,14 @@ public class KdbMetadataHandler
                         case 's':
                             schemaBuilder.addStringField(colname);
                             break;
-                        // case 'p': //timestamp
-                        //     continue;
-                        //     // schemaBuilder.addDateMilliField(colname);
-                        //     // schemaBuilder.addField("z", new ArrowType.Timestamp(TimeUnit.NANOSECOND, "UTC"));
-                        //     // break;
-                        // case 't': //time
-                        //     continue;
-                        //     // schemaBuilder.addDateMilliField(colname);
-                        //     // schemaBuilder.addField("t", new ArrowType.Time(TimeUnit.NANOSECOND, 128)); //only 8, 16, 32, 64, or 128 bits supported
-                        //     // break;
+                        case 'p': //timestamp
+                            // schemaBuilder.addField("z", new ArrowType.Timestamp(TimeUnit.NANOSECOND, "UTC"));
+                            schemaBuilder.addDateMilliField(colname);
+                            break;
+                        case 't': //time
+                            // schemaBuilder.addField("t", new ArrowType.Time(TimeUnit.NANOSECOND, 128)); //only 8, 16, 32, 64, or 128 bits supported
+                            // schemaBuilder.addtimeDateMilliField(colname);
+                            break;
                         case 'd':
                             schemaBuilder.addDateDayField(colname);
                             break;
