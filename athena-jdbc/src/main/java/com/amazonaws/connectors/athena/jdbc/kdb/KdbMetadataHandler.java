@@ -155,7 +155,8 @@ public class KdbMetadataHandler
         LOGGER.info("getSchema...");
         SchemaBuilder schemaBuilder = SchemaBuilder.newBuilder();
         try ( Statement stmt = jdbcConnection.createStatement() ) {
-            try ( ResultSet rs = stmt.executeQuery("q) flip `COLUMN_NAME`COLUMN_TYPE!(cols t; (value meta t)[;`t] )") ) {
+            String tbl = tableName.getTableName();
+            try ( ResultSet rs = stmt.executeQuery("q) flip `COLUMN_NAME`COLUMN_TYPE!(cols " + tbl + "; (value meta " + tbl + ")[;`t] )") ) {
                 while (rs.next()) {
                     String colname = rs.getString("COLUMN_NAME");
                     Character coltypeobj = (Character)rs.getObject("COLUMN_TYPE");
