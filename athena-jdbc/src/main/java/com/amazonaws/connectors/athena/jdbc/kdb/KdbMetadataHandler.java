@@ -160,7 +160,7 @@ public class KdbMetadataHandler
                     String colname = rs.getString("COLUMN_NAME");
                     Character coltypeobj = (Character)rs.getObject("COLUMN_TYPE");
                     char coltype = (char)coltypeobj;
-                    LOGGER.info("schema column mapping...%s %s", colname, coltype);
+                    LOGGER.info("schema column mapping..." + colname + " " + coltype);
                     switch (coltype) {
                         case 'b':
                             schemaBuilder.addBitField(colname);
@@ -259,7 +259,7 @@ public class KdbMetadataHandler
             Schema s = schemaBuilder.build();
             for ( Field f : s.getFields() ) {
                 Types.MinorType mtype = Types.getMinorTypeForArrowType(f.getType());
-                LOGGER.info("%s %s %s", f.getName(), f.getType(), mtype);
+                LOGGER.info(String.format("%s %s %s", f.getName(), f.getType(), mtype));
             }
             return s;
         // }
