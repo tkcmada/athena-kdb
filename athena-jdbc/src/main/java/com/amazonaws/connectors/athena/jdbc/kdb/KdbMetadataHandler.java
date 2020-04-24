@@ -57,6 +57,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -126,14 +127,24 @@ public class KdbMetadataHandler
     protected List<TableName> listTables(final Connection jdbcConnection, final String databaseName)
             throws SQLException
     {
-        // try (ResultSet resultSet = getTables(jdbcConnection, databaseName)) {
-            ImmutableList.Builder<TableName> list = ImmutableList.builder();
-            list.add(new TableName("schema1", "t"));
-            // while (resultSet.next()) {
-            //     list.add(getSchemaTableName(resultSet));
-            // }
-            return list.build();
-        // }
+        try ( Statement stmt = jdbcConnection.createStatement() ) {
+            try (ResultSet resultSet = stmt.executeQuery("q) flip ( `TABLE_NAME`dummy ! ( tables[]; tables[] ) )") ) {
+                ImmutableList.Builder<TableName> list = ImmutableList.builder();
+                while (resultSet.next()) {
+                    list.add(getSchemaTableName(resultSet));
+                }
+                return list.build();
+            }
+        }
+    }
+
+    @Override
+    protected TableName getSchemaTableName(final ResultSet resultSet)
+            throws SQLException
+    {
+        return new TableName(
+                "schema1",
+                resultSet.getString("TABLE_NAME"));
     }
 
     @Override
@@ -142,12 +153,61 @@ public class KdbMetadataHandler
     {
         LOGGER.info("getSchema...");
         SchemaBuilder schemaBuilder = SchemaBuilder.newBuilder();
-        schemaBuilder.addIntField("x");
-        schemaBuilder.addFloat8Field("f");
-        schemaBuilder.addStringField("s");
-        schemaBuilder.addField("d", new ArrowType.Date(DateUnit.DAY));
-        // schemaBuilder.addField("t", new ArrowType.Time(TimeUnit.NANOSECOND, 128)); //only 8, 16, 32, 64, or 128 bits supported
-        // schemaBuilder.addField("z", new ArrowType.Timestamp(TimeUnit.NANOSECOND, "UTC"));
+        try ( Statement stmt = jdbcConnection.createStatement() ) {
+            try ( ResultSet rs = stmt.executeQuery("q) flip `COLUMN_NAME`COLUMN_TYPE!(cols t; (value meta t)[;`t] )") ) {
+                while (rs.next()) {
+                    String colname = rs.getString("COLUMN_NAME");
+                    Character coltypeobj = (Character)rs.getObject("COLUMN_TYPE");
+                    char coltype = (char)coltypeobj;
+                    switch (coltype) {
+                        case 'b':
+                            schemaBuilder.addBitField(colname);
+                            break;
+                        case 'x':
+                            schemaBuilder.addTinyIntField(colname);
+                            break;
+                        case 'h':
+                            schemaBuilder.addSmallIntField(colname);
+                            break;
+                        case 'i':
+                            schemaBuilder.addIntField(colname);
+                            break;
+                        case 'j':
+                            schemaBuilder.addBigIntField(colname);
+                            break;
+                        case 'e':
+                            schemaBuilder.addFloat4Field(colname);
+                            break;
+                        case 'f':
+                            schemaBuilder.addFloat8Field(colname);
+                            break;
+                        case 'c':
+                            schemaBuilder.addTinyIntField(colname); //TODO : character is preffered
+                            break;
+                        case 's':
+                            schemaBuilder.addStringField(colname);
+                            break;
+                        // case 'p': //timestamp
+                        //     continue;
+                        //     // schemaBuilder.addDateMilliField(colname);
+                        //     // schemaBuilder.addField("z", new ArrowType.Timestamp(TimeUnit.NANOSECOND, "UTC"));
+                        //     // break;
+                        // case 't': //time
+                        //     continue;
+                        //     // schemaBuilder.addDateMilliField(colname);
+                        //     // schemaBuilder.addField("t", new ArrowType.Time(TimeUnit.NANOSECOND, 128)); //only 8, 16, 32, 64, or 128 bits supported
+                        //     // break;
+                        case 'd':
+                            schemaBuilder.addDateDayField(colname);
+                            break;
+                        default:
+                            LOGGER.error("getSchema: Unable to map type for column[" + colname + "] to a supported type, attempted " + coltype);
+                    }
+                }
+                
+                
+            }
+        }
 
 // q)(2i;2.3;`qwe;2000.01.02;12:34:56.000;2000.01.02D12:34:56.000000000)
 // (2i;2.3;`qwe;2000.01.02;12:34:56.000;2000.01.02D12:34:56.000000000)

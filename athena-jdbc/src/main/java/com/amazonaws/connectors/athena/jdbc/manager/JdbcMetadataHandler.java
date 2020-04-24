@@ -175,7 +175,7 @@ public abstract class JdbcMetadataHandler
         }
     }
 
-    private ResultSet getTables(final Connection connection, final String schemaName)
+    protected ResultSet getTables(final Connection connection, final String schemaName)
             throws SQLException
     {
         DatabaseMetaData metadata = connection.getMetaData();
@@ -187,7 +187,7 @@ public abstract class JdbcMetadataHandler
                 new String[] {"TABLE", "VIEW"});
     }
 
-    private TableName getSchemaTableName(final ResultSet resultSet)
+    protected TableName getSchemaTableName(final ResultSet resultSet)
             throws SQLException
     {
         return new TableName(
