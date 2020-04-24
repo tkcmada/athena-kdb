@@ -48,6 +48,7 @@ import org.apache.arrow.vector.types.DateUnit;
 import org.apache.arrow.vector.types.TimeUnit;
 import org.apache.arrow.vector.types.Types;
 import org.apache.arrow.vector.types.pojo.ArrowType;
+import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -159,6 +160,7 @@ public class KdbMetadataHandler
                     String colname = rs.getString("COLUMN_NAME");
                     Character coltypeobj = (Character)rs.getObject("COLUMN_TYPE");
                     char coltype = (char)coltypeobj;
+                    LOGGER.info("schema column mapping...%s %s", colname, coltype);
                     switch (coltype) {
                         case 'b':
                             schemaBuilder.addBitField(colname);
@@ -254,7 +256,12 @@ public class KdbMetadataHandler
             // add partition columns
             partitionSchema.getFields().forEach(schemaBuilder::addField);
 
-            return schemaBuilder.build();
+            Schema s = schemaBuilder.build();
+            for ( Field f : s.getFields() ) {
+                Types.MinorType mtype = Types.getMinorTypeForArrowType(f.getType());
+                LOGGER.info("%s %s %s", f.getName(), f.getType(), mtype);
+            }
+            return s;
         // }
     }
 
