@@ -224,7 +224,9 @@ public abstract class JdbcRecordHandler
                 return (DateDayExtractor) (Object context, NullableDateDayHolder dst) ->
                 {
                     if (resultSet.getDate(fieldName) != null) {
+                        LOGGER.info("date field value:" + resultSet.getDate(fieldName));
                         dst.value = Days.daysBetween(EPOCH, new DateTime(((Date) resultSet.getDate(fieldName)).getTime())).getDays();
+                        LOGGER.info("dst.value=" + dst.value);
                     }
                     dst.isSet = resultSet.wasNull() ? 0 : 1;
                 };
