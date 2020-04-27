@@ -111,13 +111,14 @@ public class KdbQueryStringBuilder
     };
 
     @VisibleForTesting
-    static String toLiteral(Object value, ArrowType type) {        
-        String literal = _toLiteral(value, type);
+    static String toLiteral(Object value, ArrowType type, String columnName) {        
+        boolean isGUID = columnName.equals("g"); //FIXME
+        String literal = _toLiteral(value, type, isGUID);
         LOGGER.info("literal:" + String.valueOf(literal));
         return literal;
     }
 
-    static String _toLiteral(Object value, ArrowType type) {
+    static String _toLiteral(Object value, ArrowType type, boolean isGUID) {
             Types.MinorType minorTypeForArrowType = Types.getMinorTypeForArrowType(type);
 LOGGER.info("type:" + type + " minortype:" + String.valueOf(minorTypeForArrowType) + " value:" + String.valueOf(value));
 
@@ -143,7 +144,30 @@ LOGGER.info("type:" + type + " minortype:" + String.valueOf(minorTypeForArrowTyp
                     org.joda.time.LocalDateTime timestamp = ((org.joda.time.LocalDateTime) value);
                     return DATE_FORMAT.get().print(timestamp) + "Z" + TIME_FORMAT.get().print(timestamp);
                 case VARCHAR:
-                    return String.valueOf(value);
+                    if( isGUID )
+                    {
+                        //guid
+                        if ( value == null )
+                        {
+                            return "0Ng";
+                        }
+                        else
+                        {
+                            return "\"G\"$\"" + value + "\"";
+                        }
+                    }
+                    else
+                    {
+                        //symbol
+                        if ( value == null )
+                        {
+                            return "`";
+                        }
+                        else
+                        {
+                            return "`" + String.valueOf(value);
+                        }                        
+                    }
                 // case VARBINARY:
                 //     return String.valueOf((byte[]) typeAndValue.getValue()); //or throw exception
                 case DECIMAL:
@@ -226,7 +250,7 @@ LOGGER.info("type:" + type + " minortype:" + String.valueOf(minorTypeForArrowTyp
                 // }
                 List<Object> literals = Lists.newArrayListWithCapacity(singleValues.size());
                 for(Object val : singleValues)
-                    literals.add(toLiteral(val, type));
+                    literals.add(toLiteral(val, type, columnName));
                 String values = Joiner.on(",").join(literals);
                 disjuncts.add(quote(columnName) + " IN (" + values + ")");
             }
@@ -238,7 +262,7 @@ LOGGER.info("type:" + type + " minortype:" + String.valueOf(minorTypeForArrowTyp
     protected String toPredicate(String columnName, String operator, Object value, ArrowType type, List<TypeAndValue> accumulator)
     {
         // accumulator.add(new TypeAndValue(type, value));
-        return quote(columnName) + " " + operator + " " + toLiteral(value, type);
+        return quote(columnName) + " " + operator + " " + toLiteral(value, type, columnName);
     }
 
     @Override

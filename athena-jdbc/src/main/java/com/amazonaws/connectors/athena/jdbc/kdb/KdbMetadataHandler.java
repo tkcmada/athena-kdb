@@ -207,6 +207,9 @@ public class KdbMetadataHandler
                         case 's': //symbol
                             schemaBuilder.addStringField(colname);
                             break;
+                        case 'g': //guid
+                            schemaBuilder.addStringField(colname);
+                            break;
                         case 'p': //timestamp
                             schemaBuilder.addDateMilliField(colname); //works only for mills.
                             // schemaBuilder.addField(colname, Types.MinorType.TIMESTAMPNANO.getType()); // -> [Detected unsupported type[Timestamp(NANOSECOND, null) / TIMESTAMPNANO for column[z]]

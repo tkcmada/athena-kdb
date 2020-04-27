@@ -239,7 +239,10 @@ public abstract class JdbcRecordHandler
             case VARCHAR:
                 return (VarCharExtractor) (Object context, NullableVarCharHolder dst) ->
                 {
-                    dst.value = resultSet.getString(fieldName);
+                    Object value = resultSet.getString(fieldName);
+                    if(value != null) {
+                        dst.value = value.toString();
+                    }
                     dst.isSet = resultSet.wasNull() ? 0 : 1;
                 };
             case VARBINARY:
