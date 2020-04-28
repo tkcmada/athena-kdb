@@ -84,6 +84,10 @@ public abstract class JdbcRecordHandler
         extends RecordHandler
 {
     public static final org.joda.time.MutableDateTime EPOCH = new org.joda.time.MutableDateTime();
+    static {
+        EPOCH.setDate(0);
+    }
+
     private static final Logger LOGGER = LoggerFactory.getLogger(JdbcRecordHandler.class);
     protected final JdbcConnectionFactory jdbcConnectionFactory;
     private final DatabaseConnectionConfig databaseConnectionConfig;
@@ -223,9 +227,10 @@ public abstract class JdbcRecordHandler
             case DATEDAY:
                 return (DateDayExtractor) (Object context, NullableDateDayHolder dst) ->
                 {
-                    if (resultSet.getDate(fieldName) != null) {
-                        LOGGER.info("date field value:" + resultSet.getDate(fieldName));
-                        dst.value = Days.daysBetween(EPOCH, new DateTime(((Date) resultSet.getDate(fieldName)).getTime())).getDays();
+                    java.sql.Date date = resultSet.getDate(fieldName);
+                    if (date != null) {
+                        LOGGER.info("date field value:" + date + " " + date.getClass().getName());
+                        dst.value = Days.daysBetween(EPOCH, new DateTime( ((java.util.Date) date).getTime() )).getDays();
                         LOGGER.info("dst.value=" + dst.value);
                     }
                     dst.isSet = resultSet.wasNull() ? 0 : 1;
