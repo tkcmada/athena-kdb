@@ -51,6 +51,8 @@ import com.amazonaws.connectors.athena.jdbc.connection.RdsSecretsCredentialProvi
 import com.amazonaws.services.athena.AmazonAthena;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.secretsmanager.AWSSecretsManager;
+import com.google.common.annotations.VisibleForTesting;
+
 import org.apache.arrow.vector.holders.NullableBigIntHolder;
 import org.apache.arrow.vector.holders.NullableBitHolder;
 import org.apache.arrow.vector.holders.NullableDateDayHolder;
@@ -83,7 +85,7 @@ import java.util.Map;
 public abstract class JdbcRecordHandler
         extends RecordHandler
 {
-    public static final org.joda.time.MutableDateTime EPOCH = new org.joda.time.MutableDateTime(1970, 0, 1, 0, 0, 0, 0); //java epoch
+    public static final org.joda.time.MutableDateTime EPOCH = new org.joda.time.MutableDateTime(1970, 1, 1, 0, 0, 0, 0); //1970-01-01 00:00:00.000
     private static final Logger LOGGER = LoggerFactory.getLogger(JdbcRecordHandler.class);
     protected final JdbcConnectionFactory jdbcConnectionFactory;
     private final DatabaseConnectionConfig databaseConnectionConfig;
@@ -156,7 +158,8 @@ public abstract class JdbcRecordHandler
     /**
      * Creates an Extractor for the given field. In this example the extractor just creates some random data.
      */
-    protected Extractor makeExtractor(Field field, ResultSet resultSet, Map<String, String> partitionValues)
+    @VisibleForTesting
+    public Extractor makeExtractor(Field field, ResultSet resultSet, Map<String, String> partitionValues)
     {
         Types.MinorType fieldType = Types.getMinorTypeForArrowType(field.getType());
 
