@@ -83,11 +83,7 @@ import java.util.Map;
 public abstract class JdbcRecordHandler
         extends RecordHandler
 {
-    public static final org.joda.time.MutableDateTime EPOCH = new org.joda.time.MutableDateTime();
-    static {
-        EPOCH.setDate(0);
-    }
-
+    public static final org.joda.time.MutableDateTime EPOCH = new org.joda.time.MutableDateTime(1970, 0, 1, 0, 0, 0, 0); //java epoch
     private static final Logger LOGGER = LoggerFactory.getLogger(JdbcRecordHandler.class);
     protected final JdbcConnectionFactory jdbcConnectionFactory;
     private final DatabaseConnectionConfig databaseConnectionConfig;
