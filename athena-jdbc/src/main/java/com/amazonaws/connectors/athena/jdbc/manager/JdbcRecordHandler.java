@@ -230,7 +230,10 @@ public abstract class JdbcRecordHandler
                     java.sql.Date date = resultSet.getDate(fieldName);
                     if (date != null) {
                         LOGGER.info("date field value:" + date + " " + date.getClass().getName());
-                        dst.value = Days.daysBetween(EPOCH, new DateTime( ((java.util.Date) date).getTime() )).getDays();
+                        LOGGER.info("EPOCH = " + EPOCH);
+                        DateTime date2 = new DateTime( ((java.util.Date) date).getTime() );
+                        LOGGER.info("date2 = " + date2);
+                        dst.value = Days.daysBetween(EPOCH, date2).getDays();
                         LOGGER.info("dst.value=" + dst.value);
                     }
                     dst.isSet = resultSet.wasNull() ? 0 : 1;
