@@ -184,7 +184,7 @@ public class KdbRecordHandlerTest
                 .put("g"        , valueSet11)
                 .build());
 
-        String expectedSql = "q) select testCol1, testCol2, testCol3, testCol4, testCol5, testCol6, testCol7, testCol8, testCol9, testCol10, g from testTable PARTITION(p0)  where (testCol1 IN (1i,2i)) , (testCol2 = `abc) , ((testCol3 > 2 AND testCol3 <= 20)) , (testCol4 = 1.1) , (testCol5 = 1i) , (testCol6 = 0i) , (testCol7 = 1.2) , (testCol8 = 1b) , (testCol9 = 2020.01.01) , (testCol10 = 2020.01.01Z02:03:04.005000000) , (g = \"G\"$\"1234-5678\")";
+        String expectedSql = "q) select testCol1, testCol2, testCol3, testCol4, testCol5, testCol6, testCol7, testCol8, testCol9, testCol10, g from testTable PARTITION(p0)  where (testCol1 IN (1i,2i)) , (testCol2 = `abc) , ((testCol3 > 2 AND testCol3 <= 20)) , (testCol4 = 1.1) , (testCol5 = 1i) , (testCol6 = 0i) , (testCol7 = 1.2) , (testCol8 = 1b) , (testCol9 = 2020.01.01) , (testCol10 = 2020.01.01D02:03:04.005000000) , (g = \"G\"$\"1234-5678\")";
         PreparedStatement expectedPreparedStatement = Mockito.mock(PreparedStatement.class);
         Mockito.when(this.connection.prepareStatement(Mockito.eq(expectedSql))).thenReturn(expectedPreparedStatement);
 

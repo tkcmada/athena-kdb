@@ -134,7 +134,7 @@ public class KdbQueryStringBuilder
 
     @VisibleForTesting
     static String toLiteral(Object value, ArrowType type, Types.MinorType minorTypeForArrowType, KdbTypes kdbtype) {
-LOGGER.info("type:" + String.valueOf(type) + " minortype:" + String.valueOf(minorTypeForArrowType) + " kdbtype:" + String.valueOf(kdbtype) + " value:" + String.valueOf(value));
+LOGGER.info("type:" + String.valueOf(type) + " minortype:" + String.valueOf(minorTypeForArrowType) + " kdbtype:" + String.valueOf(kdbtype) + " value:" + String.valueOf(value) + " valuetype:" + (value == null ? "null" : value.getClass().getName()));
 
             switch (minorTypeForArrowType) {
                 case BIGINT:
@@ -165,7 +165,7 @@ LOGGER.info("type:" + String.valueOf(type) + " minortype:" + String.valueOf(mino
                     }
                 case DATEMILLI:
                     org.joda.time.LocalDateTime timestamp = ((org.joda.time.LocalDateTime) value);
-                    return DATE_FORMAT.get().print(timestamp) + "Z" + TIME_FORMAT.get().print(timestamp);
+                    return DATE_FORMAT.get().print(timestamp) + "D" + TIME_FORMAT.get().print(timestamp);
                 case VARCHAR:
                     if( kdbtype == KdbTypes.guid_type )
                     {
