@@ -79,6 +79,8 @@ public class KdbMetadataHelper
     {
         if ( "g".equals(columnName) )
             return KdbTypes.guid_type;
+        else if ( "r".equals(columnName) )
+            return KdbTypes.real_type;
         else
             return null;
     }

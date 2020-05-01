@@ -146,7 +146,10 @@ LOGGER.info("type:" + String.valueOf(type) + " minortype:" + String.valueOf(mino
                 case TINYINT:
                     return ((Number) value).byteValue() + "i";
                 case FLOAT8:
-                    return String.valueOf( ((Number) value).doubleValue() );
+                    if ( kdbtype == KdbTypes.real_type)
+                        return String.valueOf( ((Number) value).doubleValue() ) + "e"; 
+                    else
+                        return String.valueOf( ((Number) value).doubleValue() );
                 case FLOAT4:
                     return String.valueOf( ((Number) value).floatValue() );
                 case BIT:

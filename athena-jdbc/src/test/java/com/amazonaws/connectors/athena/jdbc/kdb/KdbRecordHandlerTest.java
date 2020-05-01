@@ -87,6 +87,7 @@ public class KdbRecordHandlerTest
         this.metadataHandler = Mockito.mock(KdbMetadataHandler.class);
         this.metadataHelper = Mockito.mock(KdbMetadataHelper.class);
         Mockito.when(metadataHelper.getKdbType("g")).thenReturn(KdbTypes.guid_type);
+        Mockito.when(metadataHelper.getKdbType("r")).thenReturn(KdbTypes.real_type);
         jdbcSplitQueryBuilder = new KdbQueryStringBuilder(metadataHelper, "`");
         final DatabaseConnectionConfig databaseConnectionConfig = new DatabaseConnectionConfig("testCatalog", JdbcConnectionFactory.DatabaseEngine.MYSQL,
                 "mysql://jdbc:mysql://hostname/user=A&password=B");
@@ -134,7 +135,7 @@ public class KdbRecordHandlerTest
         schemaBuilder.addField(FieldBuilder.newBuilder("testCol1", Types.MinorType.INT.getType()).build());
         schemaBuilder.addField(FieldBuilder.newBuilder("testCol2", Types.MinorType.VARCHAR.getType()).build());
         schemaBuilder.addField(FieldBuilder.newBuilder("testCol3", Types.MinorType.BIGINT.getType()).build());
-        schemaBuilder.addField(FieldBuilder.newBuilder("testCol4", Types.MinorType.FLOAT4.getType()).build());
+        schemaBuilder.addField(FieldBuilder.newBuilder("r"       , Types.MinorType.FLOAT8.getType()).build());
         schemaBuilder.addField(FieldBuilder.newBuilder("testCol5", Types.MinorType.SMALLINT.getType()).build());
         schemaBuilder.addField(FieldBuilder.newBuilder("testCol6", Types.MinorType.TINYINT.getType()).build());
         schemaBuilder.addField(FieldBuilder.newBuilder("testCol7", Types.MinorType.FLOAT8.getType()).build());
@@ -160,7 +161,7 @@ public class KdbRecordHandlerTest
 
         ValueSet valueSet2 = getSingleValueSet("abc");
         ValueSet valueSet3 = getRangeSet(Marker.Bound.ABOVE, 2L, Marker.Bound.EXACTLY, 20L);
-        ValueSet valueSet4 = getSingleValueSet(1.1F);
+        ValueSet valueSet4 = getSingleValueSet(1.5); //real
         ValueSet valueSet5 = getSingleValueSet(1);
         ValueSet valueSet6 = getSingleValueSet(0);
         ValueSet valueSet7 = getSingleValueSet(1.2d);
@@ -174,7 +175,7 @@ public class KdbRecordHandlerTest
                 .put("testCol1", valueSet1)
                 .put("testCol2", valueSet2)
                 .put("testCol3", valueSet3)
-                .put("testCol4", valueSet4)
+                .put("r"       , valueSet4)
                 .put("testCol5", valueSet5)
                 .put("testCol6", valueSet6)
                 .put("testCol7", valueSet7)
@@ -184,7 +185,7 @@ public class KdbRecordHandlerTest
                 .put("g"        , valueSet11)
                 .build());
 
-        String expectedSql = "q) select testCol1, testCol2, testCol3, testCol4, testCol5, testCol6, testCol7, testCol8, testCol9, testCol10, g from testTable PARTITION(p0)  where (testCol1 IN (1i,2i)) , (testCol2 = `abc) , ((testCol3 > 2 AND testCol3 <= 20)) , (testCol4 = 1.1) , (testCol5 = 1i) , (testCol6 = 0i) , (testCol7 = 1.2) , (testCol8 = 1b) , (testCol9 = 2020.01.01) , (testCol10 = 2020.01.01D02:03:04.005000000) , (g = \"G\"$\"1234-5678\")";
+        String expectedSql = "q) select testCol1, testCol2, testCol3, r, testCol5, testCol6, testCol7, testCol8, testCol9, testCol10, g from testTable PARTITION(p0)  where (testCol1 IN (1i,2i)) , (testCol2 = `abc) , ((testCol3 > 2 AND testCol3 <= 20)) , (r = 1.5e) , (testCol5 = 1i) , (testCol6 = 0i) , (testCol7 = 1.2) , (testCol8 = 1b) , (testCol9 = 2020.01.01) , (testCol10 = 2020.01.01D02:03:04.005000000) , (g = \"G\"$\"1234-5678\")";
         PreparedStatement expectedPreparedStatement = Mockito.mock(PreparedStatement.class);
         Mockito.when(this.connection.prepareStatement(Mockito.eq(expectedSql))).thenReturn(expectedPreparedStatement);
 

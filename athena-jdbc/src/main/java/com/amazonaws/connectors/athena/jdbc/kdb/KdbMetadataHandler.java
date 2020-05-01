@@ -196,7 +196,8 @@ public class KdbMetadataHandler
                             schemaBuilder.addBigIntField(colname);
                             break;
                         case 'e':
-                            schemaBuilder.addFloat4Field(colname);
+                            // schemaBuilder.addFloat4Field(colname);
+                            schemaBuilder.addFloat8Field(colname); //map to Float8 but actual kdb type is real
                             break;
                         case 'f':
                             schemaBuilder.addFloat8Field(colname);

@@ -81,6 +81,7 @@ public class KdbQueryStringBuilderTest
     public void toLiteral() throws Exception {
         LOGGER.info("toLiteral starting");
 
+        Assert.assertEquals("1.5e"               , KdbQueryStringBuilder.toLiteral(1.5, null, MinorType.FLOAT8, KdbTypes.real_type));
         Assert.assertEquals("1970.01.02"         , KdbQueryStringBuilder.toLiteral(1, null, MinorType.DATEDAY, null));
         Assert.assertEquals("1970.01.04D00:00:00.004000000", KdbQueryStringBuilder.toLiteral(new org.joda.time.LocalDateTime(1970, 1, 4, 0, 0, 0, 4), null, MinorType.DATEMILLI, null));
         Assert.assertEquals("\"G\"$\"1234-5678\"", KdbQueryStringBuilder.toLiteral("1234-5678", null, MinorType.VARCHAR, KdbTypes.guid_type));
