@@ -24,6 +24,7 @@ import com.amazonaws.athena.connector.lambda.domain.predicate.Constraints;
 import com.amazonaws.athena.connector.lambda.domain.predicate.Range;
 import com.amazonaws.athena.connector.lambda.domain.predicate.SortedRangeSet;
 import com.amazonaws.athena.connector.lambda.domain.predicate.ValueSet;
+import com.amazonaws.athena.connector.lambda.handlers.MetadataHandler;
 import com.amazonaws.connectors.athena.jdbc.manager.JdbcSplitQueryBuilder;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -37,6 +38,7 @@ import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.joda.time.DateTimeZone;
+import org.joda.time.Days;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
@@ -62,10 +64,23 @@ public class KdbQueryStringBuilder
         extends JdbcSplitQueryBuilder
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(KdbQueryStringBuilder.class);
+    private static final org.joda.time.LocalDateTime EPOCH = new org.joda.time.LocalDateTime(1970, 1, 1, 0, 0);
 
-    KdbQueryStringBuilder(final String quoteCharacters)
+    private final KdbMetadataHelper metadatahelper;   
+
+    public KdbQueryStringBuilder(final KdbMetadataHelper metadatahelper, final String quoteCharacters)
     {
         super(quoteCharacters);
+        this.metadatahelper = metadatahelper;
+    }
+
+    /**
+     * This is used and override in KdbQueryStringBuilder.
+     */
+    @Override
+    protected String getPrefixSQL()
+    {
+        return "q) ";
     }
 
     @Override
@@ -110,17 +125,16 @@ public class KdbQueryStringBuilder
         }
     };
 
-    @VisibleForTesting
-    static String toLiteral(Object value, ArrowType type, String columnName) {        
-        boolean isGUID = columnName.equals("g"); //FIXME
-        String literal = _toLiteral(value, type, isGUID);
+    static String toLiteral(Object value, ArrowType type, String columnName, KdbMetadataHelper metadatahelper) {        
+        LOGGER.info("column:" + String.valueOf(columnName) + " value:" + String.valueOf(value));
+        String literal = toLiteral(value, type, Types.getMinorTypeForArrowType(type), metadatahelper.getKdbType(columnName));
         LOGGER.info("literal:" + String.valueOf(literal));
         return literal;
     }
 
-    static String _toLiteral(Object value, ArrowType type, boolean isGUID) {
-            Types.MinorType minorTypeForArrowType = Types.getMinorTypeForArrowType(type);
-LOGGER.info("type:" + type + " minortype:" + String.valueOf(minorTypeForArrowType) + " value:" + String.valueOf(value));
+    @VisibleForTesting
+    static String toLiteral(Object value, ArrowType type, Types.MinorType minorTypeForArrowType, KdbTypes kdbtype) {
+LOGGER.info("type:" + String.valueOf(type) + " minortype:" + String.valueOf(minorTypeForArrowType) + " kdbtype:" + String.valueOf(kdbtype) + " value:" + String.valueOf(value));
 
             switch (minorTypeForArrowType) {
                 case BIGINT:
@@ -138,13 +152,22 @@ LOGGER.info("type:" + type + " minortype:" + String.valueOf(minorTypeForArrowTyp
                 case BIT:
                     return ((boolean) value) ? "1b" : "0b";
                 case DATEDAY:
-                    org.joda.time.LocalDateTime dateTime = ((org.joda.time.LocalDateTime) value);
-                    return DATE_FORMAT.get().print(dateTime);
+                    if (value instanceof Number)
+                    {
+                        int days_from_epoch = ((Number)value).intValue();
+                        org.joda.time.LocalDateTime dateTime = EPOCH.minusDays(-days_from_epoch);
+                        return DATE_FORMAT.get().print(dateTime);
+                    }
+                    else
+                    {
+                        org.joda.time.LocalDateTime dateTime = ((org.joda.time.LocalDateTime) value);
+                        return DATE_FORMAT.get().print(dateTime);
+                    }
                 case DATEMILLI:
                     org.joda.time.LocalDateTime timestamp = ((org.joda.time.LocalDateTime) value);
                     return DATE_FORMAT.get().print(timestamp) + "Z" + TIME_FORMAT.get().print(timestamp);
                 case VARCHAR:
-                    if( isGUID )
+                    if( kdbtype == KdbTypes.guid_type )
                     {
                         //guid
                         if ( value == null )
@@ -250,7 +273,7 @@ LOGGER.info("type:" + type + " minortype:" + String.valueOf(minorTypeForArrowTyp
                 // }
                 List<Object> literals = Lists.newArrayListWithCapacity(singleValues.size());
                 for(Object val : singleValues)
-                    literals.add(toLiteral(val, type, columnName));
+                    literals.add(toLiteral(val, type, columnName, metadatahelper));
                 String values = Joiner.on(",").join(literals);
                 disjuncts.add(quote(columnName) + " IN (" + values + ")");
             }
@@ -262,7 +285,7 @@ LOGGER.info("type:" + type + " minortype:" + String.valueOf(minorTypeForArrowTyp
     protected String toPredicate(String columnName, String operator, Object value, ArrowType type, List<TypeAndValue> accumulator)
     {
         // accumulator.add(new TypeAndValue(type, value));
-        return quote(columnName) + " " + operator + " " + toLiteral(value, type, columnName);
+        return quote(columnName) + " " + operator + " " + toLiteral(value, type, columnName, metadatahelper);
     }
 
     @Override

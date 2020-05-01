@@ -69,6 +69,16 @@ public abstract class JdbcSplitQueryBuilder
     }
 
     /**
+     * This is used and override in KdbQueryStringBuilder.
+     * 
+     * @return
+     */
+    protected String getPrefixSQL()
+    {
+        return "";
+    }
+
+    /**
      * Common logic to build Split SQL including constraints translated in where clause.
      *
      * @param jdbcConnection JDBC connection. See {@link Connection}.
@@ -99,6 +109,7 @@ public abstract class JdbcSplitQueryBuilder
                 .map(this::quote)
                 .collect(Collectors.joining(", "));
 
+        sql.append(getPrefixSQL());
         sql.append("SELECT ");
         sql.append(columnNames);
         if (columnNames.isEmpty()) {

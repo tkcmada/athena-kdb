@@ -69,6 +69,8 @@ public class KdbRecordHandlerTest
     private Connection connection;
     private JdbcConnectionFactory jdbcConnectionFactory;
     private JdbcSplitQueryBuilder jdbcSplitQueryBuilder;
+    private KdbMetadataHandler metadataHandler;
+    private KdbMetadataHelper metadataHelper;
     private AmazonS3 amazonS3;
     private AWSSecretsManager secretsManager;
     private AmazonAthena athena;
@@ -82,7 +84,10 @@ public class KdbRecordHandlerTest
         this.connection = Mockito.mock(Connection.class);
         this.jdbcConnectionFactory = Mockito.mock(JdbcConnectionFactory.class);
         Mockito.when(this.jdbcConnectionFactory.getConnection(Mockito.mock(JdbcCredentialProvider.class))).thenReturn(this.connection);
-        jdbcSplitQueryBuilder = new KdbQueryStringBuilder("`");
+        this.metadataHandler = Mockito.mock(KdbMetadataHandler.class);
+        this.metadataHelper = Mockito.mock(KdbMetadataHelper.class);
+        Mockito.when(metadataHelper.getKdbType("g")).thenReturn(KdbTypes.guid_type);
+        jdbcSplitQueryBuilder = new KdbQueryStringBuilder(metadataHelper, "`");
         final DatabaseConnectionConfig databaseConnectionConfig = new DatabaseConnectionConfig("testCatalog", JdbcConnectionFactory.DatabaseEngine.MYSQL,
                 "mysql://jdbc:mysql://hostname/user=A&password=B");
 
@@ -179,7 +184,7 @@ public class KdbRecordHandlerTest
                 .put("g"        , valueSet11)
                 .build());
 
-        String expectedSql = "SELECT testCol1, testCol2, testCol3, testCol4, testCol5, testCol6, testCol7, testCol8, testCol9, testCol10, g FROM testTable PARTITION(p0)  WHERE (testCol1 IN (1i,2i)) AND (testCol2 = `abc) AND ((testCol3 > 2 AND testCol3 <= 20)) AND (testCol4 = 1.1) AND (testCol5 = 1i) AND (testCol6 = 0i) AND (testCol7 = 1.2) AND (testCol8 = 1b) AND (testCol9 = 2020.01.01) AND (testCol10 = 2020.01.01Z02:03:04.005000000) AND (g = \"G\"$\"1234-5678\")";
+        String expectedSql = "q) SELECT testCol1, testCol2, testCol3, testCol4, testCol5, testCol6, testCol7, testCol8, testCol9, testCol10, g FROM testTable PARTITION(p0)  WHERE (testCol1 IN (1i,2i)) AND (testCol2 = `abc) AND ((testCol3 > 2 AND testCol3 <= 20)) AND (testCol4 = 1.1) AND (testCol5 = 1i) AND (testCol6 = 0i) AND (testCol7 = 1.2) AND (testCol8 = 1b) AND (testCol9 = 2020.01.01) AND (testCol10 = 2020.01.01Z02:03:04.005000000) AND (g = \"G\"$\"1234-5678\")";
         PreparedStatement expectedPreparedStatement = Mockito.mock(PreparedStatement.class);
         Mockito.when(this.connection.prepareStatement(Mockito.eq(expectedSql))).thenReturn(expectedPreparedStatement);
 
