@@ -158,9 +158,10 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
         {
             if ( metadataHelper.getKdbType(fieldName) == KdbTypes.real_type )
             {
-                dst.value = resultSet.getFloat(fieldName);
+                final float f = resultSet.getFloat(fieldName);
+                dst.value = Double.parseDouble("" + f); //do not just cast from float to double as it would contain fraction
                 dst.isSet = resultSet.wasNull() ? 0 : 1;
-                LOGGER.info("Float8Extractor(float) " + String.valueOf(fieldName) + " " + dst.value + " float value=" + resultSet.getFloat(fieldName));
+                LOGGER.info("Float8Extractor(float) " + String.valueOf(fieldName) + " " + dst.value + " float value=" + f);
             }
             else
             {

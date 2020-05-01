@@ -43,6 +43,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 
 import org.apache.arrow.vector.holders.NullableDateDayHolder;
+import org.apache.arrow.vector.holders.NullableFloat8Holder;
 import org.apache.arrow.vector.types.Types;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.joda.time.LocalDate;
@@ -121,6 +122,17 @@ public class KdbRecordHandlerTest
         extractor.extract(null, holder);
         Assert.assertEquals(1, holder.isSet);
         Assert.assertEquals(0, holder.value);
+    }
+
+    @Test
+    public void newFloat8Extractor() throws Exception
+    {
+        LOGGER.info("newFloat8Extractor starting...");
+        ResultSet rs = Mockito.mock(ResultSet.class);
+        Mockito.when(rs.getFloat("r")).thenReturn(1.4f);
+        NullableFloat8Holder dst = new NullableFloat8Holder();
+        this.mySqlRecordHandler.newFloat8Extractor(rs, "r").extract(null, dst);
+        Assert.assertEquals(1.4, dst.value, 0.000000001);
     }
 
     @Test
