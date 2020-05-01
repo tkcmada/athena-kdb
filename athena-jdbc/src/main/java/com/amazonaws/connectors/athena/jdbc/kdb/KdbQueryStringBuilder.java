@@ -99,10 +99,10 @@ public class KdbQueryStringBuilder
 
         if (KdbMetadataHandler.ALL_PARTITIONS.equals(partitionName)) {
             // No partitions
-            return String.format(" FROM %s ", tableName);
+            return String.format(" from %s ", tableName);
         }
 
-        return String.format(" FROM %s PARTITION(%s) ", tableName, partitionName);
+        return String.format(" from %s PARTITION(%s) ", tableName, partitionName);
     }
 
     @Override

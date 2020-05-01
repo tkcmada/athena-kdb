@@ -110,7 +110,7 @@ public abstract class JdbcSplitQueryBuilder
                 .collect(Collectors.joining(", "));
 
         sql.append(getPrefixSQL());
-        sql.append("SELECT ");
+        sql.append("select ");
         sql.append(columnNames);
         if (columnNames.isEmpty()) {
             sql.append("null");
@@ -123,8 +123,8 @@ public abstract class JdbcSplitQueryBuilder
         List<String> clauses = toConjuncts(tableSchema.getFields(), constraints, accumulator, split.getProperties());
         clauses.addAll(getPartitionWhereClauses(split));
         if (!clauses.isEmpty()) {
-            sql.append(" WHERE ")
-                    .append(Joiner.on(" AND ").join(clauses));
+            sql.append(" where ")
+                    .append(Joiner.on(" , ").join(clauses));
         }
 
         LOGGER.info("Generated SQL : {}", sql.toString());
