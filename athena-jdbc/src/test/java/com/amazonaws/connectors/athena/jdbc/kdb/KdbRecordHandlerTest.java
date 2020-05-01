@@ -92,7 +92,7 @@ public class KdbRecordHandlerTest
         final DatabaseConnectionConfig databaseConnectionConfig = new DatabaseConnectionConfig("testCatalog", JdbcConnectionFactory.DatabaseEngine.MYSQL,
                 "mysql://jdbc:mysql://hostname/user=A&password=B");
 
-        this.mySqlRecordHandler = new KdbRecordHandler(databaseConnectionConfig, amazonS3, secretsManager, athena, jdbcConnectionFactory, jdbcSplitQueryBuilder);
+        this.mySqlRecordHandler = new KdbRecordHandler(metadataHelper, databaseConnectionConfig, amazonS3, secretsManager, athena, jdbcConnectionFactory, jdbcSplitQueryBuilder);
     }
 
     @Test

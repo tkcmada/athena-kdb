@@ -212,11 +212,7 @@ public abstract class JdbcRecordHandler
                     dst.isSet = resultSet.wasNull() ? 0 : 1;
                 };
             case FLOAT8:
-                return (Float8Extractor) (Object context, NullableFloat8Holder dst) ->
-                {
-                    dst.value = resultSet.getDouble(fieldName);
-                    dst.isSet = resultSet.wasNull() ? 0 : 1;
-                };
+                return newFloat8Extractor(resultSet, fieldName);
             case DECIMAL:
                 return (DecimalExtractor) (Object context, NullableDecimalHolder dst) ->
                 {
@@ -263,6 +259,16 @@ public abstract class JdbcRecordHandler
             default:
                 throw new RuntimeException("Unhandled type " + fieldType);
         }
+    }
+
+    protected Float8Extractor newFloat8Extractor(final ResultSet resultSet, final String fieldName)
+    {
+        return (Float8Extractor) (Object context, NullableFloat8Holder dst) ->
+        {
+            dst.value = resultSet.getDouble(fieldName);
+            dst.isSet = resultSet.wasNull() ? 0 : 1;
+        };
+
     }
 
     /**

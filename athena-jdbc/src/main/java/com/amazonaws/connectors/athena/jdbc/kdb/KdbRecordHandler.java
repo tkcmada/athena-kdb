@@ -24,6 +24,7 @@ import com.amazonaws.athena.connector.lambda.data.Block;
 import com.amazonaws.athena.connector.lambda.data.BlockSpiller;
 import com.amazonaws.athena.connector.lambda.data.writers.GeneratedRowWriter;
 import com.amazonaws.athena.connector.lambda.data.writers.extractors.Extractor;
+import com.amazonaws.athena.connector.lambda.data.writers.extractors.Float8Extractor;
 import com.amazonaws.athena.connector.lambda.domain.Split;
 import com.amazonaws.athena.connector.lambda.domain.TableName;
 import com.amazonaws.athena.connector.lambda.domain.predicate.Constraints;
@@ -64,6 +65,8 @@ public class KdbRecordHandler
 
     private static final String MYSQL_QUOTE_CHARACTER = "`";
 
+    private final KdbMetadataHelper metadataHelper;
+
     private final JdbcSplitQueryBuilder jdbcSplitQueryBuilder;
 
     /**
@@ -78,15 +81,21 @@ public class KdbRecordHandler
 
     public KdbRecordHandler(DatabaseConnectionConfig databaseConnectionConfig)
     {
-        this(databaseConnectionConfig, AmazonS3ClientBuilder.defaultClient(), AWSSecretsManagerClientBuilder.defaultClient(), AmazonAthenaClientBuilder.defaultClient(),
-                new GenericJdbcConnectionFactory(databaseConnectionConfig, KdbMetadataHandler.JDBC_PROPERTIES), new KdbQueryStringBuilder(new KdbMetadataHelper(databaseConnectionConfig), MYSQL_QUOTE_CHARACTER));
+        this(new KdbMetadataHelper(databaseConnectionConfig), databaseConnectionConfig);
+    }
+
+    public KdbRecordHandler(KdbMetadataHelper metadataHelper, DatabaseConnectionConfig databaseConnectionConfig)
+    {
+        this(metadataHelper, databaseConnectionConfig, AmazonS3ClientBuilder.defaultClient(), AWSSecretsManagerClientBuilder.defaultClient(), AmazonAthenaClientBuilder.defaultClient(),
+                new GenericJdbcConnectionFactory(databaseConnectionConfig, KdbMetadataHandler.JDBC_PROPERTIES), new KdbQueryStringBuilder(metadataHelper, MYSQL_QUOTE_CHARACTER));
     }
 
     @VisibleForTesting
-    KdbRecordHandler(DatabaseConnectionConfig databaseConnectionConfig, final AmazonS3 amazonS3, final AWSSecretsManager secretsManager,
+    KdbRecordHandler(KdbMetadataHelper metadataHelper, DatabaseConnectionConfig databaseConnectionConfig, final AmazonS3 amazonS3, final AWSSecretsManager secretsManager,
             final AmazonAthena athena, final JdbcConnectionFactory jdbcConnectionFactory, final JdbcSplitQueryBuilder jdbcSplitQueryBuilder)
     {
         super(amazonS3, secretsManager, athena, databaseConnectionConfig, jdbcConnectionFactory);
+        this.metadataHelper = Validate.notNull(metadataHelper, "metadataHelper must not be null");
         this.jdbcSplitQueryBuilder = Validate.notNull(jdbcSplitQueryBuilder, "query builder must not be null");
         LOGGER.info("jdbcSplitQueryBuilder:" + jdbcSplitQueryBuilder.getClass().getName());
     }
@@ -140,6 +149,25 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
         catch (SQLException sqlException) {
             throw new RuntimeException(sqlException.getErrorCode() + ": " + sqlException.getMessage(), sqlException);
         }
+    }
+
+    @Override
+    protected Float8Extractor newFloat8Extractor(final ResultSet resultSet, final String fieldName)
+    {
+        return (Float8Extractor) (Object context, org.apache.arrow.vector.holders.NullableFloat8Holder dst) ->
+        {
+            if ( metadataHelper.getKdbType(fieldName) == KdbTypes.real_type )
+            {
+                dst.value = resultSet.getFloat(fieldName);
+                dst.isSet = resultSet.wasNull() ? 0 : 1;
+            }
+            else
+            {
+                dst.value = resultSet.getDouble(fieldName);
+                dst.isSet = resultSet.wasNull() ? 0 : 1;
+            }
+        };
+
     }
 
 
