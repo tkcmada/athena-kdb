@@ -69,16 +69,6 @@ public abstract class JdbcSplitQueryBuilder
     }
 
     /**
-     * This is used and override in KdbQueryStringBuilder.
-     * 
-     * @return
-     */
-    protected String getPrefixSQL()
-    {
-        return "";
-    }
-
-    /**
      * Common logic to build Split SQL including constraints translated in where clause.
      *
      * @param jdbcConnection JDBC connection. See {@link Connection}.
@@ -109,8 +99,7 @@ public abstract class JdbcSplitQueryBuilder
                 .map(this::quote)
                 .collect(Collectors.joining(", "));
 
-        sql.append(getPrefixSQL());
-        sql.append("select ");
+        sql.append("SELECT ");
         sql.append(columnNames);
         if (columnNames.isEmpty()) {
             sql.append("null");
@@ -123,7 +112,7 @@ public abstract class JdbcSplitQueryBuilder
         List<String> clauses = toConjuncts(tableSchema.getFields(), constraints, accumulator, split.getProperties());
         clauses.addAll(getPartitionWhereClauses(split));
         if (!clauses.isEmpty()) {
-            sql.append(" where ")
+            sql.append(" WHERE ")
                     .append(Joiner.on(" , ").join(clauses));
         }
 
@@ -193,6 +182,11 @@ public abstract class JdbcSplitQueryBuilder
         for (Field column : columns) {
             if (partitionSplit.containsKey(column.getName())) {
                 continue; // Ignore constraints on partition name as RDBMS does not contain these as columns. Presto will filter these values.
+            }
+            if (column.getName().equals("str"))
+            {
+                LOGGER.info("list of char column is excluded from where caluse");
+                continue;
             }
             ArrowType type = column.getType();
             if (constraints.getSummary() != null && !constraints.getSummary().isEmpty()) {

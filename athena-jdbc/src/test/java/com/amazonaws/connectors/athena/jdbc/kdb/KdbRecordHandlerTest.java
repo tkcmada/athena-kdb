@@ -89,6 +89,7 @@ public class KdbRecordHandlerTest
         this.metadataHelper = Mockito.mock(KdbMetadataHelper.class);
         Mockito.when(metadataHelper.getKdbType("g")).thenReturn(KdbTypes.guid_type);
         Mockito.when(metadataHelper.getKdbType("r")).thenReturn(KdbTypes.real_type);
+        Mockito.when(metadataHelper.getKdbType("str")).thenReturn(KdbTypes.list_of_char_type);
         jdbcSplitQueryBuilder = new KdbQueryStringBuilder(metadataHelper, "`");
         final DatabaseConnectionConfig databaseConnectionConfig = new DatabaseConnectionConfig("testCatalog", JdbcConnectionFactory.DatabaseEngine.MYSQL,
                 "mysql://jdbc:mysql://hostname/user=A&password=B");
@@ -155,6 +156,7 @@ public class KdbRecordHandlerTest
         schemaBuilder.addField(FieldBuilder.newBuilder("testCol9", Types.MinorType.DATEDAY.getType()).build());
         schemaBuilder.addField(FieldBuilder.newBuilder("testCol10", Types.MinorType.DATEMILLI.getType()).build());
         schemaBuilder.addField(FieldBuilder.newBuilder("g"        , Types.MinorType.VARCHAR.getType()).build());
+        schemaBuilder.addField(FieldBuilder.newBuilder("str"      , Types.MinorType.VARCHAR.getType()).build());
         schemaBuilder.addField(FieldBuilder.newBuilder("partition_name", Types.MinorType.VARCHAR.getType()).build());
         Schema schema = schemaBuilder.build();
 
@@ -181,6 +183,7 @@ public class KdbRecordHandlerTest
         ValueSet valueSet9 = getSingleValueSet(new LocalDateTime(2020, 1, 1, 0, 0, 0, 0));
         ValueSet valueSet10 = getSingleValueSet(new LocalDateTime(2020, 1, 1, 2, 3, 4, 5));
         ValueSet valueSet11 = getSingleValueSet("1234-5678");
+        ValueSet valueSet_str = getSingleValueSet("xyz");
 
         Constraints constraints = Mockito.mock(Constraints.class);
         Mockito.when(constraints.getSummary()).thenReturn(new ImmutableMap.Builder<String, ValueSet>()
@@ -195,9 +198,10 @@ public class KdbRecordHandlerTest
                 .put("testCol9", valueSet9)
                 .put("testCol10", valueSet10)
                 .put("g"        , valueSet11)
+                .put("str"      , valueSet_str)
                 .build());
 
-        String expectedSql = "q) select testCol1, testCol2, testCol3, r, testCol5, testCol6, testCol7, testCol8, testCol9, testCol10, g from testTable PARTITION(p0)  where (testCol1 IN (1i,2i)) , (testCol2 = `abc) , ((testCol3 > 2 AND testCol3 <= 20)) , (r = 1.5e) , (testCol5 = 1i) , (testCol6 = 0i) , (testCol7 = 1.2) , (testCol8 = 1b) , (testCol9 = 2020.01.01) , (testCol10 = 2020.01.01D02:03:04.005000000) , (g = \"G\"$\"1234-5678\")";
+        String expectedSql = "q) select testCol1, testCol2, testCol3, r, testCol5, testCol6, testCol7, testCol8, testCol9, testCol10, g, str from testTable PARTITION(p0)  where (testCol1 IN (1i,2i)) , (testCol2 = `abc) , ((testCol3 > 2 AND testCol3 <= 20)) , (r = 1.5e) , (testCol5 = 1i) , (testCol6 = 0i) , (testCol7 = 1.2) , (testCol8 = 1b) , (testCol9 = 2020.01.01) , (testCol10 = 2020.01.01D02:03:04.005000000) , (g = \"G\"$\"1234-5678\")";
         PreparedStatement expectedPreparedStatement = Mockito.mock(PreparedStatement.class);
         Mockito.when(this.connection.prepareStatement(Mockito.eq(expectedSql))).thenReturn(expectedPreparedStatement);
 

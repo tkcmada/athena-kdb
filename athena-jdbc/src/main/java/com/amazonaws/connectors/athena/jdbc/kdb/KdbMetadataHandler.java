@@ -208,6 +208,9 @@ public class KdbMetadataHandler
                         case 's': //symbol
                             schemaBuilder.addStringField(colname);
                             break;
+                        case 'C': //list of char
+                            schemaBuilder.addStringField(colname);
+                            break;
                         case 'g': //guid
                             schemaBuilder.addStringField(colname);
                             break;

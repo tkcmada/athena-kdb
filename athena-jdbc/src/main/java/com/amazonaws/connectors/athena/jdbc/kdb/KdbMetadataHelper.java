@@ -81,6 +81,8 @@ public class KdbMetadataHelper
             return KdbTypes.guid_type;
         else if ( "r".equals(columnName) )
             return KdbTypes.real_type;
+        else if ( "str".equals(columnName) )
+            return KdbTypes.list_of_char_type;
         else
             return null;
     }

@@ -30,4 +30,5 @@ public enum KdbTypes
     , time_type
     , timestamp_type
     , guid_type
+    , list_of_char_type
 }

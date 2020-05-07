@@ -75,12 +75,86 @@ public class KdbQueryStringBuilder
     }
 
     /**
-     * This is used and override in KdbQueryStringBuilder.
+     * Common logic to build Split SQL including constraints translated in where clause.
+     *
+     * @param jdbcConnection JDBC connection. See {@link Connection}.
+     * @param catalog Athena provided catalog name.
+     * @param schema table schema name.
+     * @param table table name.
+     * @param tableSchema table schema (column and type information).
+     * @param constraints constraints passed by Athena to push down.
+     * @param split table split.
+     * @return prepated statement with SQL. See {@link PreparedStatement}.
+     * @throws SQLException JDBC database exception.
      */
     @Override
-    protected String getPrefixSQL()
+    public PreparedStatement buildSql(
+            final Connection jdbcConnection,
+            final String catalog,
+            final String schema,
+            final String table,
+            final Schema tableSchema,
+            final Constraints constraints,
+            final Split split)
+            throws SQLException
     {
-        return "q) ";
+        final String sql = buildSqlString(catalog, schema, table, tableSchema, constraints, split);
+        PreparedStatement statement = jdbcConnection.prepareStatement(sql);
+
+        return statement;
+    }
+      
+    /**
+     * Common logic to build Split SQL including constraints translated in where clause.
+     *
+     * @param catalog Athena provided catalog name.
+     * @param schema table schema name.
+     * @param table table name.
+     * @param tableSchema table schema (column and type information).
+     * @param constraints constraints passed by Athena to push down.
+     * @param split table split.
+     * @return prepated statement with SQL. See {@link PreparedStatement}.
+     * @throws SQLException JDBC database exception.
+     */
+    @VisibleForTesting
+    String buildSqlString(
+            final String catalog,
+            final String schema,
+            final String table,
+            final Schema tableSchema,
+            final Constraints constraints,
+            final Split split)
+            throws SQLException
+    {   
+        StringBuilder sql = new StringBuilder();
+
+        String columnNames = tableSchema.getFields().stream()
+                .map(Field::getName)
+                .filter(c -> !split.getProperties().containsKey(c))
+                .map(this::quote)
+                .collect(Collectors.joining(", "));
+
+        sql.append("q) ");
+        sql.append("select ");
+        sql.append(columnNames);
+        if (columnNames.isEmpty()) {
+            sql.append("null");
+        }
+
+        sql.append(getFromClauseWithSplit(catalog, schema, table, split));
+
+        List<TypeAndValue> accumulator = new ArrayList<>();
+
+        List<String> clauses = toConjuncts(tableSchema.getFields(), constraints, accumulator, split.getProperties());
+        clauses.addAll(getPartitionWhereClauses(split));
+        if (!clauses.isEmpty()) {
+            sql.append(" where ")
+                    .append(Joiner.on(" , ").join(clauses));
+        }
+
+        LOGGER.info("Generated SQL : {}", sql.toString());
+
+        return sql.toString();
     }
 
     @Override
@@ -181,6 +255,10 @@ LOGGER.info("type:" + String.valueOf(type) + " minortype:" + String.valueOf(mino
                         {
                             return "\"G\"$\"" + value + "\"";
                         }
+                    }
+                    else if( kdbtype == KdbTypes.list_of_char_type )
+                    {
+                        throw new UnsupportedOperationException("list of char type cannot be pushed down to where statement");
                     }
                     else
                     {
