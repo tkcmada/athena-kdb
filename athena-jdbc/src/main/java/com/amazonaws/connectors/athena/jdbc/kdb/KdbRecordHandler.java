@@ -25,6 +25,8 @@ import com.amazonaws.athena.connector.lambda.data.BlockSpiller;
 import com.amazonaws.athena.connector.lambda.data.writers.GeneratedRowWriter;
 import com.amazonaws.athena.connector.lambda.data.writers.extractors.Extractor;
 import com.amazonaws.athena.connector.lambda.data.writers.extractors.Float8Extractor;
+import com.amazonaws.athena.connector.lambda.data.writers.extractors.VarCharExtractor;
+import com.amazonaws.athena.connector.lambda.data.writers.holders.NullableVarCharHolder;
 import com.amazonaws.athena.connector.lambda.domain.Split;
 import com.amazonaws.athena.connector.lambda.domain.TableName;
 import com.amazonaws.athena.connector.lambda.domain.predicate.Constraints;
@@ -170,8 +172,18 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
                 LOGGER.info("Float8Extractor(double) " + String.valueOf(fieldName) + " " + dst.value + " double value=" + resultSet.getDouble(fieldName));
             }
         };
-
     }
 
-
+    @Override
+    protected VarCharExtractor newVarcharExtractor(final ResultSet resultSet, final String fieldName)
+    {
+        return (VarCharExtractor) (Object context, NullableVarCharHolder dst) ->
+        {
+            Object value = resultSet.getObject(fieldName);
+            if(value != null) {
+                dst.value = value.toString();
+            }
+            dst.isSet = resultSet.wasNull() ? 0 : 1;
+        };
+    }
 }

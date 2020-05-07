@@ -256,6 +256,18 @@ LOGGER.info("type:" + String.valueOf(type) + " minortype:" + String.valueOf(mino
                             return "\"G\"$\"" + value + "\"";
                         }
                     }
+                    else if( kdbtype == KdbTypes.char_type )
+                    {
+                        //char
+                        if ( value == null )
+                        {
+                            return "\" \"";
+                        }
+                        else
+                        {
+                            return "\"" + value.toString() + "\"";
+                        }
+                    }
                     else if( kdbtype == KdbTypes.list_of_char_type )
                     {
                         throw new UnsupportedOperationException("list of char type cannot be pushed down to where statement");

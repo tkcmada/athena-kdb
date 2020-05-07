@@ -202,9 +202,9 @@ public class KdbMetadataHandler
                         case 'f':
                             schemaBuilder.addFloat8Field(colname);
                             break;
-                        // case 'c': //char is out of support
-                        //     schemaBuilder.addTinyIntField(colname); //This causes Character to Byte cast error.
-                        //     break;
+                        case 'c': //char
+                            schemaBuilder.addStringField(colname); //because Athena doesn't have Character
+                            break;
                         case 's': //symbol
                             schemaBuilder.addStringField(colname);
                             break;

@@ -242,14 +242,7 @@ public abstract class JdbcRecordHandler
                     dst.isSet = resultSet.wasNull() ? 0 : 1;
                 };
             case VARCHAR:
-                return (VarCharExtractor) (Object context, NullableVarCharHolder dst) ->
-                {
-                    Object value = resultSet.getString(fieldName);
-                    if(value != null) {
-                        dst.value = value.toString();
-                    }
-                    dst.isSet = resultSet.wasNull() ? 0 : 1;
-                };
+                return newVarcharExtractor(resultSet, fieldName);
             case VARBINARY:
                 return (VarBinaryExtractor) (Object context, NullableVarBinaryHolder dst) ->
                 {
@@ -269,6 +262,18 @@ public abstract class JdbcRecordHandler
             dst.isSet = resultSet.wasNull() ? 0 : 1;
         };
 
+    }
+
+    protected VarCharExtractor newVarcharExtractor(final ResultSet resultSet, final String fieldName)
+    {
+        return (VarCharExtractor) (Object context, NullableVarCharHolder dst) ->
+        {
+            Object value = resultSet.getString(fieldName);
+            if(value != null) {
+                dst.value = value.toString();
+            }
+            dst.isSet = resultSet.wasNull() ? 0 : 1;
+        };
     }
 
     /**

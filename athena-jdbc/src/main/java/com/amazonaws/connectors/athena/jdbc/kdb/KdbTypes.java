@@ -23,6 +23,7 @@ public enum KdbTypes
 {
     bit_type
     , byte_type
+    , char_type
     , real_type
     , short_type
     , float_type
