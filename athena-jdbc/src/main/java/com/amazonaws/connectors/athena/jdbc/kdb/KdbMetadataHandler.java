@@ -226,7 +226,7 @@ public class KdbMetadataHandler
                             schemaBuilder.addDateDayField(colname);
                             break;
                         default:
-                            LOGGER.error("getSchema: Unable to map type for column[" + colname + "] to a supported type, attempted " + coltype);
+                            LOGGER.error("getSchema: Unable to map type for column[" + colname + "] to a supported type, attempted '" + coltype + "'");
                     }
                 }
                 
