@@ -207,42 +207,116 @@ public class KdbQueryStringBuilder
     }
 
     @VisibleForTesting
-    static String toLiteral(Object value, ArrowType type, Types.MinorType minorTypeForArrowType, KdbTypes kdbtype) {
-LOGGER.info("type:" + String.valueOf(type) + " minortype:" + String.valueOf(minorTypeForArrowType) + " kdbtype:" + String.valueOf(kdbtype) + " value:" + String.valueOf(value) + " valuetype:" + (value == null ? "null" : value.getClass().getName()));
+    static String toLiteral(Object value, ArrowType _type, Types.MinorType minorTypeForArrowType, KdbTypes kdbtype) {
+LOGGER.info("type:" + String.valueOf(_type) + " minortype:" + String.valueOf(minorTypeForArrowType) + " kdbtype:" + String.valueOf(kdbtype) + " value:" + String.valueOf(value) + " valuetype:" + (value == null ? "null" : value.getClass().getName()));
 
             switch (minorTypeForArrowType) {
                 case BIGINT:
-                    return String.valueOf(value);
+                    if ( value == null )
+                    {
+                        return "0Nj";
+                    }
+                    else
+                    {
+                        return String.valueOf(value);
+                    }
                 case INT:
-                    return ((Number) value).intValue() + "i";
+                    if ( value == null )
+                    {
+                        return "0Ni";
+                    }
+                    else
+                    {
+                        return ((Number) value).intValue() + "i";
+                    }
                 case SMALLINT:
-                    return ((Number) value).shortValue() + "i";
-                case TINYINT:
-                    return ((Number) value).byteValue() + "i";
+                    if ( value == null )
+                    {
+                        return "0Nh";
+                    }
+                    else
+                    {
+                        return ((Number) value).shortValue() + "i";
+                    }
+                case TINYINT: //byte
+                    if ( value == null )
+                    {
+                        return "0x00";
+                    }
+                    else
+                    {
+                        return ((Number) value).byteValue() + "i";
+                    }
                 case FLOAT8:
                     if ( kdbtype == KdbTypes.real_type)
-                        return String.valueOf( ((Number) value).doubleValue() ) + "e"; 
-                    else
-                        return String.valueOf( ((Number) value).doubleValue() );
-                case FLOAT4:
-                    return String.valueOf( ((Number) value).floatValue() );
-                case BIT:
-                    return ((boolean) value) ? "1b" : "0b";
-                case DATEDAY:
-                    if (value instanceof Number)
                     {
-                        int days_from_epoch = ((Number)value).intValue();
-                        org.joda.time.LocalDateTime dateTime = EPOCH.minusDays(-days_from_epoch);
-                        return DATE_FORMAT.get().print(dateTime);
+                        if ( value == null )
+                        {
+                            return "0Ne";
+                        }
+                        else
+                        {
+                            return String.valueOf( ((Number) value).doubleValue() ) + "e"; 
+                        }
                     }
                     else
                     {
-                        org.joda.time.LocalDateTime dateTime = ((org.joda.time.LocalDateTime) value);
-                        return DATE_FORMAT.get().print(dateTime);
+                        if ( value == null )
+                        {
+                            return "0n";
+                        }
+                        else
+                        {
+                            return String.valueOf( ((Number) value).doubleValue() );
+                        }
+                    }
+                case FLOAT4: //real
+                    if ( value == null )
+                    {
+                        return "0Ne";
+                    }
+                    else
+                    {
+                        return String.valueOf( ((Number) value).floatValue() );
+                    }
+                case BIT: //boolean
+                    if ( value == null )
+                    {
+                        return "0b";
+                    }
+                    else
+                    {
+                        return ((boolean) value) ? "1b" : "0b";
+                    }
+                case DATEDAY:
+                    if ( value == null )
+                    {
+                        return "0Nd";
+                    }
+                    else
+                    {
+                        if (value instanceof Number)
+                        {
+                            int days_from_epoch = ((Number)value).intValue();
+                            org.joda.time.LocalDateTime dateTime = EPOCH.minusDays(-days_from_epoch);
+                            return DATE_FORMAT.get().print(dateTime);
+                        }
+                        else
+                        {
+                            org.joda.time.LocalDateTime dateTime = ((org.joda.time.LocalDateTime) value);
+                            return DATE_FORMAT.get().print(dateTime);
+                        }
                     }
                 case DATEMILLI:
-                    org.joda.time.LocalDateTime timestamp = ((org.joda.time.LocalDateTime) value);
-                    return DATE_FORMAT.get().print(timestamp) + "D" + TIME_FORMAT.get().print(timestamp);
+                    if ( value == null )
+                    {
+                        return "0Np";
+                    }
+                    else
+                    {
+                        org.joda.time.LocalDateTime timestamp = ((org.joda.time.LocalDateTime) value);
+                        return DATE_FORMAT.get().print(timestamp) + "D" + TIME_FORMAT.get().print(timestamp);
+                    }
                 case VARCHAR:
                     if( kdbtype == KdbTypes.guid_type )
                     {
@@ -277,7 +351,7 @@ LOGGER.info("type:" + String.valueOf(type) + " minortype:" + String.valueOf(mino
                         //symbol
                         if ( value == null )
                         {
-                            return "`";
+                            return "` ";
                         }
                         else
                         {
@@ -286,12 +360,12 @@ LOGGER.info("type:" + String.valueOf(type) + " minortype:" + String.valueOf(mino
                     }
                 // case VARBINARY:
                 //     return String.valueOf((byte[]) typeAndValue.getValue()); //or throw exception
-                case DECIMAL:
-                    ArrowType.Decimal decimalType = (ArrowType.Decimal) type;
-                    BigDecimal decimal = BigDecimal.valueOf((Long) value, decimalType.getScale());
-                    return decimal.toPlainString();
+                // case DECIMAL:
+                //     ArrowType.Decimal decimalType = (ArrowType.Decimal) type;
+                //     BigDecimal decimal = BigDecimal.valueOf((Long) value, decimalType.getScale());
+                //     return decimal.toPlainString();
                 default:
-                    throw new UnsupportedOperationException(String.format("Can't handle type: %s, %s", type, minorTypeForArrowType));
+                    throw new UnsupportedOperationException(String.format("Can't handle type: %s, %s", _type, minorTypeForArrowType));
             }
     }
 
@@ -304,16 +378,17 @@ LOGGER.info("type:" + String.valueOf(type) + " minortype:" + String.valueOf(mino
 
         if (valueSet instanceof SortedRangeSet) {
             if (valueSet.isNone() && valueSet.isNullAllowed()) {
-                return String.format("(%s IS NULL)", columnName);
+                return toPredicateNull(columnName, type, accumulator);
             }
 
+            // we don't need to add disjunction(OR (colname IS NULL)) because
             if (valueSet.isNullAllowed()) {
-                disjuncts.add(String.format("(%s IS NULL)", columnName));
+                disjuncts.add(toPredicateNull(columnName, type, accumulator));
             }
 
             Range rangeSpan = ((SortedRangeSet) valueSet).getSpan();
             if (!valueSet.isNullAllowed() && rangeSpan.getLow().isLowerUnbounded() && rangeSpan.getHigh().isUpperUnbounded()) {
-                return String.format("(%s IS NOT NULL)", columnName);
+                return toPredicateNull(columnName, type, accumulator);
             }
 
             for (Range range : valueSet.getRanges().getOrderedRanges()) {
@@ -352,7 +427,7 @@ LOGGER.info("type:" + String.valueOf(type) + " minortype:" + String.valueOf(mino
                     }
                     // If rangeConjuncts is null, then the range was ALL, which should already have been checked for
                     Preconditions.checkState(!rangeConjuncts.isEmpty());
-                    disjuncts.add("(" + Joiner.on(" AND ").join(rangeConjuncts) + ")");
+                    disjuncts.add("(" + Joiner.on(" , ").join(rangeConjuncts) + ")");
                 }
             }
 
@@ -374,6 +449,13 @@ LOGGER.info("type:" + String.valueOf(type) + " minortype:" + String.valueOf(mino
 
         return "(" + Joiner.on(" OR ").join(disjuncts) + ")";
     }
+
+    protected String toPredicateNull(String columnName, ArrowType type, List<TypeAndValue> accumulator)
+    {
+        // accumulator.add(new TypeAndValue(type, value));
+        return "(" + quote(columnName) + " = " + toLiteral(null, type, columnName, metadatahelper) + ")";
+    }
+
 
     protected String toPredicate(String columnName, String operator, Object value, ArrowType type, List<TypeAndValue> accumulator)
     {
