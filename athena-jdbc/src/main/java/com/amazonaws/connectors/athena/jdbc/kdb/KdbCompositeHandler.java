@@ -20,8 +20,6 @@
 package com.amazonaws.connectors.athena.jdbc.kdb;
 
 import com.amazonaws.athena.connector.lambda.handlers.CompositeHandler;
-import com.amazonaws.connectors.athena.jdbc.connection.JdbcConnectionFactory;
-import com.amazonaws.connectors.athena.jdbc.manager.JDBCUtil;
 
 /**
  * Boilerplate composite handler that allows us to use a single Lambda function for both

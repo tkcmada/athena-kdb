@@ -44,7 +44,6 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.secretsmanager.AWSSecretsManager;
 import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder;
 import com.google.common.annotations.VisibleForTesting;
-
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.commons.lang3.Validate;
@@ -151,15 +150,13 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
         return (Float8Extractor) (Object context, org.apache.arrow.vector.holders.NullableFloat8Holder dst) ->
         {
             final String kdbtype = field.getFieldType().getMetadata().get(KdbMetadataHandler.KDBTYPE_KEY);
-            if ( KdbTypes.real_type.name().equals(kdbtype) )
-            {
+            if (KdbTypes.real_type.name().equals(kdbtype)) {
                 final float f = resultSet.getFloat(fieldName);
                 dst.value = Double.parseDouble("" + f); //do not just cast from float to double as it would contain fraction
                 dst.isSet = resultSet.wasNull() ? 0 : 1;
                 LOGGER.info("Float8Extractor(float) " + String.valueOf(fieldName) + " " + dst.value + " float value=" + f);
             }
-            else
-            {
+            else {
                 dst.value = resultSet.getDouble(fieldName);
                 dst.isSet = resultSet.wasNull() ? 0 : 1;
                 LOGGER.info("Float8Extractor(double) " + String.valueOf(fieldName) + " " + dst.value + " double value=" + resultSet.getDouble(fieldName));
@@ -173,7 +170,7 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
         return (VarCharExtractor) (Object context, NullableVarCharHolder dst) ->
         {
             Object value = resultSet.getObject(fieldName);
-            if(value != null) {
+            if (value != null) {
                 dst.value = value.toString();
             }
             dst.isSet = resultSet.wasNull() ? 0 : 1;

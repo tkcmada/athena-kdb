@@ -35,19 +35,14 @@ import com.amazonaws.connectors.athena.jdbc.connection.GenericJdbcConnectionFact
 import com.amazonaws.connectors.athena.jdbc.connection.JdbcConnectionFactory;
 import com.amazonaws.connectors.athena.jdbc.manager.JDBCUtil;
 import com.amazonaws.connectors.athena.jdbc.manager.JdbcMetadataHandler;
-import com.amazonaws.connectors.athena.jdbc.manager.PreparedStatementBuilder;
 import com.amazonaws.services.athena.AmazonAthena;
 import com.amazonaws.services.secretsmanager.AWSSecretsManager;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-
 import org.apache.arrow.vector.complex.reader.FieldReader;
-import org.apache.arrow.vector.types.DateUnit;
-import org.apache.arrow.vector.types.TimeUnit;
 import org.apache.arrow.vector.types.Types;
-import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.FieldType;
 import org.apache.arrow.vector.types.pojo.Schema;
@@ -55,12 +50,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
-import java.sql.DatabaseMetaData;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -82,6 +75,7 @@ public class KdbMetadataHandler
     private static final Logger LOGGER = LoggerFactory.getLogger(KdbMetadataHandler.class);
     private static final int MAX_SPLITS_PER_REQUEST = 1000_000;
     public static final String KDBTYPE_KEY = "kdbtype";
+    
     /**
      * Instantiates handler to be used by Lambda function directly.
      *
@@ -129,8 +123,8 @@ public class KdbMetadataHandler
     protected List<TableName> listTables(final Connection jdbcConnection, final String databaseName)
             throws SQLException
     {
-        try ( Statement stmt = jdbcConnection.createStatement() ) {
-            try (ResultSet resultSet = stmt.executeQuery("q) flip ( `TABLE_NAME`dummy ! ( tables[]; tables[] ) )") ) {
+        try (Statement stmt = jdbcConnection.createStatement()) {
+            try (ResultSet resultSet = stmt.executeQuery("q) flip ( `TABLE_NAME`dummy ! ( tables[]; tables[] ) )")) {
                 ImmutableList.Builder<TableName> list = ImmutableList.builder();
                 while (resultSet.next()) {
                     list.add(getSchemaTableName(resultSet));
@@ -148,7 +142,6 @@ public class KdbMetadataHandler
                 "schema1",
                 resultSet.getString("TABLE_NAME"));
     }
-
 
     @Override
     protected Schema getSchema(Connection jdbcConnection, TableName tableName, Schema partitionSchema)
@@ -172,13 +165,13 @@ public class KdbMetadataHandler
 
         LOGGER.info("getSchema...");
         SchemaBuilder schemaBuilder = SchemaBuilder.newBuilder();
-        try ( Statement stmt = jdbcConnection.createStatement() ) {
+        try (Statement stmt = jdbcConnection.createStatement()) {
             String tbl = tableName.getTableName();
-            try ( ResultSet rs = stmt.executeQuery("q) flip `COLUMN_NAME`COLUMN_TYPE!(cols " + tbl + "; (value meta " + tbl + ")[;`t] )") ) {
+            try (ResultSet rs = stmt.executeQuery("q) flip `COLUMN_NAME`COLUMN_TYPE!(cols " + tbl + "; (value meta " + tbl + ")[;`t] )")) {
                 while (rs.next()) {
                     String colname = rs.getString("COLUMN_NAME");
-                    Character coltypeobj = (Character)rs.getObject("COLUMN_TYPE");
-                    char coltype = (char)coltypeobj;
+                    Character coltypeobj = (Character) rs.getObject("COLUMN_TYPE");
+                    char coltype = (char) coltypeobj;
                     LOGGER.info("schema column mapping..." + colname + " " + coltype);
                     switch (coltype) {
                         case 'b':
@@ -279,14 +272,13 @@ public class KdbMetadataHandler
             partitionSchema.getFields().forEach(schemaBuilder::addField);
 
             Schema s = schemaBuilder.build();
-            for ( Field f : s.getFields() ) {
+            for (Field f : s.getFields()) {
                 Types.MinorType mtype = Types.getMinorTypeForArrowType(f.getType());
                 LOGGER.info(String.format("%s %s %s", f.getName(), f.getType(), mtype));
             }
             return s;
         // }
     }
-
 
     @Override
     public Schema getPartitionSchema(final String catalogName)
@@ -388,9 +380,7 @@ public class KdbMetadataHandler
     @VisibleForTesting
     static Field newField(String colname, Types.MinorType minorType, KdbTypes kdbtype)
     {
-        Map<String, String> metadata = kdbtype == null
-            ? ImmutableMap.<String, String>builder().build()
-            : ImmutableMap.<String,String>builder().put(KDBTYPE_KEY, kdbtype.name()).build();
+        Map<String, String> metadata = kdbtype == null ? Collections.emptyMap() : ImmutableMap.<String, String>builder().put(KDBTYPE_KEY, kdbtype.name()).build();
         FieldType fieldType = new FieldType(true, minorType.getType(), null, metadata);
         return new Field(colname, fieldType, null);
     }
