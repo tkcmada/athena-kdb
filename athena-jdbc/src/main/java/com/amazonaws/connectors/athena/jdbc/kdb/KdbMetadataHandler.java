@@ -72,7 +72,6 @@ import java.util.Set;
  */
 public class KdbMetadataHandler
         extends JdbcMetadataHandler
-        implements KdbMetadataHelper
 {
     static final Map<String, String> JDBC_PROPERTIES = ImmutableMap.of("databaseTerm", "SCHEMA");
     static final String GET_PARTITIONS_QUERY = "SELECT DISTINCT partition_name FROM INFORMATION_SCHEMA.PARTITIONS WHERE TABLE_NAME = ? AND TABLE_SCHEMA = ? " +
