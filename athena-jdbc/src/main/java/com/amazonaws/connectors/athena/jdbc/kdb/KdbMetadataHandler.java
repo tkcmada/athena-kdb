@@ -71,6 +71,7 @@ import java.util.Set;
  */
 public class KdbMetadataHandler
         extends JdbcMetadataHandler
+        implements KdbMetadataHelper
 {
     static final Map<String, String> JDBC_PROPERTIES = ImmutableMap.of("databaseTerm", "SCHEMA");
     static final String GET_PARTITIONS_QUERY = "SELECT DISTINCT partition_name FROM INFORMATION_SCHEMA.PARTITIONS WHERE TABLE_NAME = ? AND TABLE_SCHEMA = ? " +
@@ -218,9 +219,8 @@ public class KdbMetadataHandler
                             schemaBuilder.addDateMilliField(colname); //works only for mills.
                             // schemaBuilder.addField(colname, Types.MinorType.TIMESTAMPNANO.getType()); // -> [Detected unsupported type[Timestamp(NANOSECOND, null) / TIMESTAMPNANO for column[z]]
                             break;
-                        // case 't': //time is out of support
-                        //     // schemaBuilder.addField("t", new ArrowType.Time(TimeUnit.NANOSECOND, 128)); //only 8, 16, 32, 64, or 128 bits supported
-                        //     // schemaBuilder.addField(colname, Types.MinorType.TIMENANO.getType()); //TIMENANO is not supported in Athena
+                        // case 't': //time //Athena doesn't support TIMESEC, TIMEMICRO, TIMENANO
+                        //     schemaBuilder.addField(colname, FieldType.nullable(Types.MinorType.TIMEMILLI.getType()))
                         //     break;
                         case 'd':
                             schemaBuilder.addDateDayField(colname);
@@ -370,6 +370,22 @@ public class KdbMetadataHandler
 
         return new GetSplitsResponse(getSplitsRequest.getCatalogName(), splits, null);
     }
+
+    @Override
+    public KdbTypes getKdbType(String columnName)
+    {
+        if ( "g".equals(columnName) )
+            return KdbTypes.guid_type;
+        else if ( "r".equals(columnName) )
+            return KdbTypes.real_type;
+        else if ( "c".equals(columnName) )
+            return KdbTypes.char_type;
+        else if ( "str".equals(columnName) )
+            return KdbTypes.list_of_char_type;
+        else
+            return null;
+    }
+
 
     private int decodeContinuationToken(GetSplitsRequest request)
     {

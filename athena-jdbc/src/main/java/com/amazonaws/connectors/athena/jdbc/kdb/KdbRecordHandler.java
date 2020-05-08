@@ -83,7 +83,7 @@ public class KdbRecordHandler
 
     public KdbRecordHandler(DatabaseConnectionConfig databaseConnectionConfig)
     {
-        this(new KdbMetadataHelper(databaseConnectionConfig), databaseConnectionConfig);
+        this(new KdbMetadataHandler(databaseConnectionConfig), databaseConnectionConfig);
     }
 
     public KdbRecordHandler(KdbMetadataHelper metadataHelper, DatabaseConnectionConfig databaseConnectionConfig)

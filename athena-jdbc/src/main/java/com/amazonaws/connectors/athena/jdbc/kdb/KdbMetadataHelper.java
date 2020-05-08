@@ -69,23 +69,7 @@ import java.util.Set;
  * Handles metadata for MySQL. User must have access to `schemata`, `tables`, `columns`, `partitions` tables in
  * information_schema.
  */
-public class KdbMetadataHelper
+public interface KdbMetadataHelper
 {
-    public KdbMetadataHelper(final DatabaseConnectionConfig databaseConnectionConfig)
-    {
-    }
-
-    public KdbTypes getKdbType(String columnName)
-    {
-        if ( "g".equals(columnName) )
-            return KdbTypes.guid_type;
-        else if ( "r".equals(columnName) )
-            return KdbTypes.real_type;
-        else if ( "c".equals(columnName) )
-            return KdbTypes.char_type;
-        else if ( "str".equals(columnName) )
-            return KdbTypes.list_of_char_type;
-        else
-            return null;
-    }
+    public KdbTypes getKdbType(String columnName);
 }
