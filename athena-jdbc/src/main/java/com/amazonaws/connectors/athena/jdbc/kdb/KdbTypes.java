@@ -26,10 +26,13 @@ public enum KdbTypes
     , char_type
     , real_type
     , short_type
+    , int_type
+    , long_type
     , float_type
     , date_type
     , time_type
     , timestamp_type
     , guid_type
+    , symbol_type
     , list_of_char_type
 }

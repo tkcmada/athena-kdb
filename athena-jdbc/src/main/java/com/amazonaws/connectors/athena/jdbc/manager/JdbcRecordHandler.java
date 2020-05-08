@@ -212,7 +212,7 @@ public abstract class JdbcRecordHandler
                     dst.isSet = resultSet.wasNull() ? 0 : 1;
                 };
             case FLOAT8:
-                return newFloat8Extractor(resultSet, fieldName);
+                return newFloat8Extractor(resultSet, fieldName, field);
             case DECIMAL:
                 return (DecimalExtractor) (Object context, NullableDecimalHolder dst) ->
                 {
@@ -242,7 +242,7 @@ public abstract class JdbcRecordHandler
                     dst.isSet = resultSet.wasNull() ? 0 : 1;
                 };
             case VARCHAR:
-                return newVarcharExtractor(resultSet, fieldName);
+                return newVarcharExtractor(resultSet, fieldName, field);
             case VARBINARY:
                 return (VarBinaryExtractor) (Object context, NullableVarBinaryHolder dst) ->
                 {
@@ -254,7 +254,7 @@ public abstract class JdbcRecordHandler
         }
     }
 
-    protected Float8Extractor newFloat8Extractor(final ResultSet resultSet, final String fieldName)
+    protected Float8Extractor newFloat8Extractor(final ResultSet resultSet, final String fieldName, final Field field)
     {
         return (Float8Extractor) (Object context, NullableFloat8Holder dst) ->
         {
@@ -264,7 +264,7 @@ public abstract class JdbcRecordHandler
 
     }
 
-    protected VarCharExtractor newVarcharExtractor(final ResultSet resultSet, final String fieldName)
+    protected VarCharExtractor newVarcharExtractor(final ResultSet resultSet, final String fieldName, final Field field)
     {
         return (VarCharExtractor) (Object context, NullableVarCharHolder dst) ->
         {

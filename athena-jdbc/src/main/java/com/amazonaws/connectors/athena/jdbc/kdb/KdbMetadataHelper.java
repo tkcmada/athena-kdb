@@ -71,5 +71,4 @@ import java.util.Set;
  */
 public interface KdbMetadataHelper
 {
-    public KdbTypes getKdbType(String columnName);
 }

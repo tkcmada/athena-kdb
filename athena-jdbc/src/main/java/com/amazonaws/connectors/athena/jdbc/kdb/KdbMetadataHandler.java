@@ -49,6 +49,7 @@ import org.apache.arrow.vector.types.TimeUnit;
 import org.apache.arrow.vector.types.Types;
 import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Field;
+import org.apache.arrow.vector.types.pojo.FieldType;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,7 +82,7 @@ public class KdbMetadataHandler
     static final String PARTITION_COLUMN_NAME = "partition_name";
     private static final Logger LOGGER = LoggerFactory.getLogger(KdbMetadataHandler.class);
     private static final int MAX_SPLITS_PER_REQUEST = 1000_000;
-
+    public static final String KDBTYPE_KEY = "kdbtype";
     /**
      * Instantiates handler to be used by Lambda function directly.
      *
@@ -182,48 +183,47 @@ public class KdbMetadataHandler
                     LOGGER.info("schema column mapping..." + colname + " " + coltype);
                     switch (coltype) {
                         case 'b':
-                            schemaBuilder.addBitField(colname);
+                            schemaBuilder.addField(newField(colname, Types.MinorType.BIT, KdbTypes.bit_type));
                             break;
                         case 'x':
-                            schemaBuilder.addTinyIntField(colname);
+                            schemaBuilder.addField(newField(colname, Types.MinorType.TINYINT, KdbTypes.byte_type));
                             break;
                         case 'h':
-                            schemaBuilder.addSmallIntField(colname);
+                            schemaBuilder.addField(newField(colname, Types.MinorType.SMALLINT, KdbTypes.short_type));
                             break;
                         case 'i':
-                            schemaBuilder.addIntField(colname);
+                            schemaBuilder.addField(newField(colname, Types.MinorType.INT, KdbTypes.int_type));
                             break;
                         case 'j':
-                            schemaBuilder.addBigIntField(colname);
+                            schemaBuilder.addField(newField(colname, Types.MinorType.BIGINT, KdbTypes.long_type));
                             break;
-                        case 'e':
-                            // schemaBuilder.addFloat4Field(colname);
-                            schemaBuilder.addFloat8Field(colname); //map to Float8 but actual kdb type is real
+                        case 'e': //real is mapped to Float8 but actual kdb type is real
+                            schemaBuilder.addField(newField(colname, Types.MinorType.FLOAT8, KdbTypes.real_type));
                             break;
                         case 'f':
-                            schemaBuilder.addFloat8Field(colname);
+                            schemaBuilder.addField(newField(colname, Types.MinorType.FLOAT8, KdbTypes.float_type));
                             break;
-                        case 'c': //char
-                            schemaBuilder.addStringField(colname); //because Athena doesn't have Character
+                        case 'c': //char is mapped to VARCHAR because Athena doesn't have 
+                            schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.char_type));
                             break;
                         case 's': //symbol
-                            schemaBuilder.addStringField(colname);
+                            schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.symbol_type));
                             break;
                         case 'C': //list of char
-                            schemaBuilder.addStringField(colname);
+                            schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.list_of_char_type));
                             break;
                         case 'g': //guid
-                            schemaBuilder.addStringField(colname);
+                            schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.guid_type));
                             break;
                         case 'p': //timestamp
-                            schemaBuilder.addDateMilliField(colname); //works only for mills.
-                            // schemaBuilder.addField(colname, Types.MinorType.TIMESTAMPNANO.getType()); // -> [Detected unsupported type[Timestamp(NANOSECOND, null) / TIMESTAMPNANO for column[z]]
+                            //works only for mills.
+                            schemaBuilder.addField(newField(colname, Types.MinorType.DATEMILLI, KdbTypes.timestamp_type));
                             break;
                         // case 't': //time //Athena doesn't support TIMESEC, TIMEMICRO, TIMENANO
-                        //     schemaBuilder.addField(colname, FieldType.nullable(Types.MinorType.TIMEMILLI.getType()))
+                            // schemaBuilder.addField(newField(colname, Types.MinorType.TIMENANO, KdbTypes.time_type));
                         //     break;
                         case 'd':
-                            schemaBuilder.addDateDayField(colname);
+                            schemaBuilder.addField(newField(colname, Types.MinorType.DATEDAY, KdbTypes.date_type));
                             break;
                         default:
                             LOGGER.error("getSchema: Unable to map type for column[" + colname + "] to a supported type, attempted '" + coltype + "'");
@@ -371,22 +371,6 @@ public class KdbMetadataHandler
         return new GetSplitsResponse(getSplitsRequest.getCatalogName(), splits, null);
     }
 
-    @Override
-    public KdbTypes getKdbType(String columnName)
-    {
-        if ( "g".equals(columnName) )
-            return KdbTypes.guid_type;
-        else if ( "r".equals(columnName) )
-            return KdbTypes.real_type;
-        else if ( "c".equals(columnName) )
-            return KdbTypes.char_type;
-        else if ( "str".equals(columnName) )
-            return KdbTypes.list_of_char_type;
-        else
-            return null;
-    }
-
-
     private int decodeContinuationToken(GetSplitsRequest request)
     {
         if (request.hasContinuationToken()) {
@@ -400,5 +384,15 @@ public class KdbMetadataHandler
     private String encodeContinuationToken(int partition)
     {
         return String.valueOf(partition);
+    }
+
+    @VisibleForTesting
+    static Field newField(String colname, Types.MinorType minorType, KdbTypes kdbtype)
+    {
+        Map<String, String> metadata = kdbtype == null
+            ? ImmutableMap.<String, String>builder().build()
+            : ImmutableMap.<String,String>builder().put(KDBTYPE_KEY, kdbtype.name()).build();
+        FieldType fieldType = new FieldType(true, minorType.getType(), null, metadata);
+        return new Field(colname, fieldType, null);
     }
 }

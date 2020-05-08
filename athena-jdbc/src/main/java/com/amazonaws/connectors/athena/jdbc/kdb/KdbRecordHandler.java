@@ -67,8 +67,6 @@ public class KdbRecordHandler
 
     private static final String MYSQL_QUOTE_CHARACTER = "`";
 
-    private final KdbMetadataHelper metadataHelper;
-
     private final JdbcSplitQueryBuilder jdbcSplitQueryBuilder;
 
     /**
@@ -83,21 +81,15 @@ public class KdbRecordHandler
 
     public KdbRecordHandler(DatabaseConnectionConfig databaseConnectionConfig)
     {
-        this(new KdbMetadataHandler(databaseConnectionConfig), databaseConnectionConfig);
-    }
-
-    public KdbRecordHandler(KdbMetadataHelper metadataHelper, DatabaseConnectionConfig databaseConnectionConfig)
-    {
-        this(metadataHelper, databaseConnectionConfig, AmazonS3ClientBuilder.defaultClient(), AWSSecretsManagerClientBuilder.defaultClient(), AmazonAthenaClientBuilder.defaultClient(),
-                new GenericJdbcConnectionFactory(databaseConnectionConfig, KdbMetadataHandler.JDBC_PROPERTIES), new KdbQueryStringBuilder(metadataHelper, MYSQL_QUOTE_CHARACTER));
+        this(databaseConnectionConfig, AmazonS3ClientBuilder.defaultClient(), AWSSecretsManagerClientBuilder.defaultClient(), AmazonAthenaClientBuilder.defaultClient(),
+                new GenericJdbcConnectionFactory(databaseConnectionConfig, KdbMetadataHandler.JDBC_PROPERTIES), new KdbQueryStringBuilder(MYSQL_QUOTE_CHARACTER));
     }
 
     @VisibleForTesting
-    KdbRecordHandler(KdbMetadataHelper metadataHelper, DatabaseConnectionConfig databaseConnectionConfig, final AmazonS3 amazonS3, final AWSSecretsManager secretsManager,
+    KdbRecordHandler(DatabaseConnectionConfig databaseConnectionConfig, final AmazonS3 amazonS3, final AWSSecretsManager secretsManager,
             final AmazonAthena athena, final JdbcConnectionFactory jdbcConnectionFactory, final JdbcSplitQueryBuilder jdbcSplitQueryBuilder)
     {
         super(amazonS3, secretsManager, athena, databaseConnectionConfig, jdbcConnectionFactory);
-        this.metadataHelper = Validate.notNull(metadataHelper, "metadataHelper must not be null");
         this.jdbcSplitQueryBuilder = Validate.notNull(jdbcSplitQueryBuilder, "query builder must not be null");
         LOGGER.info("jdbcSplitQueryBuilder:" + jdbcSplitQueryBuilder.getClass().getName());
     }
@@ -154,11 +146,12 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
     }
 
     @Override
-    protected Float8Extractor newFloat8Extractor(final ResultSet resultSet, final String fieldName)
+    protected Float8Extractor newFloat8Extractor(final ResultSet resultSet, final String fieldName, final Field field)
     {
         return (Float8Extractor) (Object context, org.apache.arrow.vector.holders.NullableFloat8Holder dst) ->
         {
-            if ( metadataHelper.getKdbType(fieldName) == KdbTypes.real_type )
+            final String kdbtype = field.getFieldType().getMetadata().get(KdbMetadataHandler.KDBTYPE_KEY);
+            if ( KdbTypes.real_type.name().equals(kdbtype) )
             {
                 final float f = resultSet.getFloat(fieldName);
                 dst.value = Double.parseDouble("" + f); //do not just cast from float to double as it would contain fraction
@@ -175,7 +168,7 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
     }
 
     @Override
-    protected VarCharExtractor newVarcharExtractor(final ResultSet resultSet, final String fieldName)
+    protected VarCharExtractor newVarcharExtractor(final ResultSet resultSet, final String fieldName, final Field field)
     {
         return (VarCharExtractor) (Object context, NullableVarCharHolder dst) ->
         {

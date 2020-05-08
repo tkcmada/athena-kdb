@@ -67,12 +67,10 @@ public class KdbRecordHandlerTest
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(KdbRecordHandlerTest.class);
 
-    private KdbRecordHandler mySqlRecordHandler;
+    private KdbRecordHandler recordHandler;
     private Connection connection;
     private JdbcConnectionFactory jdbcConnectionFactory;
     private JdbcSplitQueryBuilder jdbcSplitQueryBuilder;
-    private KdbMetadataHandler metadataHandler;
-    private KdbMetadataHelper metadataHelper;
     private AmazonS3 amazonS3;
     private AWSSecretsManager secretsManager;
     private AmazonAthena athena;
@@ -88,35 +86,29 @@ public class KdbRecordHandlerTest
         this.connection = Mockito.mock(Connection.class);
         this.jdbcConnectionFactory = Mockito.mock(JdbcConnectionFactory.class);
         Mockito.when(this.jdbcConnectionFactory.getConnection(Mockito.mock(JdbcCredentialProvider.class))).thenReturn(this.connection);
-        this.metadataHandler = Mockito.mock(KdbMetadataHandler.class);
-        this.metadataHelper = Mockito.mock(KdbMetadataHelper.class);
-        Mockito.when(metadataHelper.getKdbType("g")).thenReturn(KdbTypes.guid_type);
-        Mockito.when(metadataHelper.getKdbType("r")).thenReturn(KdbTypes.real_type);
-        Mockito.when(metadataHelper.getKdbType("str")).thenReturn(KdbTypes.list_of_char_type);
-        Mockito.when(metadataHelper.getKdbType("c")).thenReturn(KdbTypes.char_type);
-        jdbcSplitQueryBuilder = new KdbQueryStringBuilder(metadataHelper, "`");
+        jdbcSplitQueryBuilder = new KdbQueryStringBuilder("`");
         final DatabaseConnectionConfig databaseConnectionConfig = new DatabaseConnectionConfig("testCatalog", JdbcConnectionFactory.DatabaseEngine.MYSQL,
                 "mysql://jdbc:mysql://hostname/user=A&password=B");
 
-        this.mySqlRecordHandler = new KdbRecordHandler(metadataHelper, databaseConnectionConfig, amazonS3, secretsManager, athena, jdbcConnectionFactory, jdbcSplitQueryBuilder);
+        this.recordHandler = new KdbRecordHandler(databaseConnectionConfig, amazonS3, secretsManager, athena, jdbcConnectionFactory, jdbcSplitQueryBuilder);
 
         tableName = new TableName("testSchema", "testTable");
 
         SchemaBuilder schemaBuilder = SchemaBuilder.newBuilder();
-        schemaBuilder.addField(FieldBuilder.newBuilder("testCol1", Types.MinorType.INT.getType()).build());
-        schemaBuilder.addField(FieldBuilder.newBuilder("testCol2", Types.MinorType.VARCHAR.getType()).build());
-        schemaBuilder.addField(FieldBuilder.newBuilder("testCol3", Types.MinorType.BIGINT.getType()).build());
-        schemaBuilder.addField(FieldBuilder.newBuilder("r"       , Types.MinorType.FLOAT8.getType()).build());
-        schemaBuilder.addField(FieldBuilder.newBuilder("testCol5", Types.MinorType.SMALLINT.getType()).build());
-        schemaBuilder.addField(FieldBuilder.newBuilder("testCol6", Types.MinorType.TINYINT.getType()).build());
-        schemaBuilder.addField(FieldBuilder.newBuilder("testCol7", Types.MinorType.FLOAT8.getType()).build());
-        schemaBuilder.addField(FieldBuilder.newBuilder("testCol8", Types.MinorType.BIT.getType()).build());
-        schemaBuilder.addField(FieldBuilder.newBuilder("testCol9", Types.MinorType.DATEDAY.getType()).build());
-        schemaBuilder.addField(FieldBuilder.newBuilder("testCol10", Types.MinorType.DATEMILLI.getType()).build());
-        schemaBuilder.addField(FieldBuilder.newBuilder("g"        , Types.MinorType.VARCHAR.getType()).build());
-        schemaBuilder.addField(FieldBuilder.newBuilder("str"      , Types.MinorType.VARCHAR.getType()).build());
-        schemaBuilder.addField(FieldBuilder.newBuilder("c"        , Types.MinorType.VARCHAR.getType()).build());
-        schemaBuilder.addField(FieldBuilder.newBuilder("partition_name", Types.MinorType.VARCHAR.getType()).build());
+        schemaBuilder.addField(KdbMetadataHandler.newField("testCol1", Types.MinorType.INT, KdbTypes.int_type));
+        schemaBuilder.addField(KdbMetadataHandler.newField("testCol2", Types.MinorType.VARCHAR, KdbTypes.symbol_type));
+        schemaBuilder.addField(KdbMetadataHandler.newField("testCol3", Types.MinorType.BIGINT, KdbTypes.long_type));
+        schemaBuilder.addField(KdbMetadataHandler.newField("r"       , Types.MinorType.FLOAT8, KdbTypes.real_type));
+        schemaBuilder.addField(KdbMetadataHandler.newField("testCol5", Types.MinorType.SMALLINT, KdbTypes.short_type));
+        schemaBuilder.addField(KdbMetadataHandler.newField("testCol6", Types.MinorType.TINYINT, KdbTypes.byte_type));
+        schemaBuilder.addField(KdbMetadataHandler.newField("testCol7", Types.MinorType.FLOAT8, KdbTypes.float_type));
+        schemaBuilder.addField(KdbMetadataHandler.newField("testCol8", Types.MinorType.BIT, KdbTypes.bit_type));
+        schemaBuilder.addField(KdbMetadataHandler.newField("testCol9", Types.MinorType.DATEDAY, KdbTypes.date_type));
+        schemaBuilder.addField(KdbMetadataHandler.newField("testCol10", Types.MinorType.DATEMILLI, KdbTypes.timestamp_type));
+        schemaBuilder.addField(KdbMetadataHandler.newField("g"        , Types.MinorType.VARCHAR, KdbTypes.guid_type));
+        schemaBuilder.addField(KdbMetadataHandler.newField("str"      , Types.MinorType.VARCHAR, KdbTypes.list_of_char_type));
+        schemaBuilder.addField(KdbMetadataHandler.newField("c"        , Types.MinorType.VARCHAR, KdbTypes.char_type));
+        schemaBuilder.addField(KdbMetadataHandler.newField("partition_name", Types.MinorType.INT, null));
         schema = schemaBuilder.build();
     }
 
@@ -141,7 +133,7 @@ public class KdbRecordHandlerTest
         schema.getFields();
         ResultSet rs = Mockito.mock(ResultSet.class); 
         Mockito.when(rs.getDate("f")).thenReturn(new Date(1970, 0, 1));
-        DateDayExtractor extractor = (DateDayExtractor)this.mySqlRecordHandler.makeExtractor(schema.getFields().get(0), rs, Maps.newHashMap()); 
+        DateDayExtractor extractor = (DateDayExtractor)this.recordHandler.makeExtractor(schema.getFields().get(0), rs, Maps.newHashMap()); 
         NullableDateDayHolder holder = new NullableDateDayHolder();
         extractor.extract(null, holder);
         Assert.assertEquals(1, holder.isSet);
@@ -155,7 +147,7 @@ public class KdbRecordHandlerTest
         ResultSet rs = Mockito.mock(ResultSet.class);
         Mockito.when(rs.getFloat("r")).thenReturn(1.4f);
         NullableFloat8Holder dst = new NullableFloat8Holder();
-        this.mySqlRecordHandler.newFloat8Extractor(rs, "r").extract(null, dst);
+        this.recordHandler.newFloat8Extractor(rs, "r", KdbMetadataHandler.newField("r", Types.MinorType.FLOAT8, KdbTypes.real_type)).extract(null, dst);
         Assert.assertEquals(1.4, dst.value, 0.000000001);
     }
 
@@ -166,7 +158,7 @@ public class KdbRecordHandlerTest
         ResultSet rs = Mockito.mock(ResultSet.class);
         Mockito.when(rs.getObject("c")).thenReturn('w');
         NullableVarCharHolder dst = new NullableVarCharHolder();
-        this.mySqlRecordHandler.newVarcharExtractor(rs, "c").extract(null, dst);
+        this.recordHandler.newVarcharExtractor(rs, "c", KdbMetadataHandler.newField("c", Types.MinorType.VARCHAR, KdbTypes.char_type)).extract(null, dst);
         Assert.assertEquals("w", dst.value);
     }
 
@@ -177,7 +169,7 @@ public class KdbRecordHandlerTest
         ResultSet rs = Mockito.mock(ResultSet.class);
         Mockito.when(rs.getObject("str")).thenReturn("abc");
         NullableVarCharHolder dst = new NullableVarCharHolder();
-        this.mySqlRecordHandler.newVarcharExtractor(rs, "str").extract(null, dst);
+        this.recordHandler.newVarcharExtractor(rs, "str", KdbMetadataHandler.newField("str", Types.MinorType.VARCHAR, KdbTypes.list_of_char_type)).extract(null, dst);
         Assert.assertEquals("abc", dst.value);
     }
 
@@ -234,7 +226,7 @@ public class KdbRecordHandlerTest
         PreparedStatement expectedPreparedStatement = Mockito.mock(PreparedStatement.class);
         Mockito.when(this.connection.prepareStatement(Mockito.eq(expectedSql))).thenReturn(expectedPreparedStatement);
 
-        PreparedStatement preparedStatement = this.mySqlRecordHandler.buildSplitSql(this.connection, "testCatalogName", tableName, schema, constraints, split);
+        PreparedStatement preparedStatement = this.recordHandler.buildSplitSql(this.connection, "testCatalogName", tableName, schema, constraints, split);
 
         Assert.assertEquals(expectedPreparedStatement, preparedStatement);
     }
@@ -284,7 +276,7 @@ public class KdbRecordHandlerTest
         PreparedStatement expectedPreparedStatement = Mockito.mock(PreparedStatement.class);
         Mockito.when(this.connection.prepareStatement(Mockito.eq(expectedSql))).thenReturn(expectedPreparedStatement);
 
-        PreparedStatement preparedStatement = this.mySqlRecordHandler.buildSplitSql(this.connection, "testCatalogName", tableName, schema, constraints, split);
+        PreparedStatement preparedStatement = this.recordHandler.buildSplitSql(this.connection, "testCatalogName", tableName, schema, constraints, split);
 
         Assert.assertEquals(expectedPreparedStatement, preparedStatement);
         // Mockito.verify(preparedStatement, Mockito.times(1)).setInt(10, 1);

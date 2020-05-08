@@ -53,6 +53,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -66,12 +67,9 @@ public class KdbQueryStringBuilder
     private static final Logger LOGGER = LoggerFactory.getLogger(KdbQueryStringBuilder.class);
     private static final org.joda.time.LocalDateTime EPOCH = new org.joda.time.LocalDateTime(1970, 1, 1, 0, 0);
 
-    private final KdbMetadataHelper metadatahelper;   
-
-    public KdbQueryStringBuilder(final KdbMetadataHelper metadatahelper, final String quoteCharacters)
+    public KdbQueryStringBuilder(final String quoteCharacters)
     {
         super(quoteCharacters);
-        this.metadatahelper = metadatahelper;
     }
 
     /**
@@ -199,9 +197,9 @@ public class KdbQueryStringBuilder
         }
     };
 
-    static String toLiteral(Object value, ArrowType type, String columnName, KdbMetadataHelper metadatahelper) {        
+    static String toLiteral(Object value, ArrowType type, String columnName, Field column) {        
         LOGGER.info("column:" + String.valueOf(columnName) + " value:" + String.valueOf(value));
-        String literal = toLiteral(value, type, Types.getMinorTypeForArrowType(type), metadatahelper.getKdbType(columnName));
+        String literal = toLiteral(value, type, Types.getMinorTypeForArrowType(type), KdbTypes.valueOf(column.getMetadata().get(KdbMetadataHandler.KDBTYPE_KEY)));
         LOGGER.info("literal:" + String.valueOf(literal));
         return literal;
     }
@@ -369,7 +367,31 @@ LOGGER.info("type:" + String.valueOf(_type) + " minortype:" + String.valueOf(min
             }
     }
 
-    protected String toPredicate(String columnName, ValueSet valueSet, ArrowType type, List<TypeAndValue> accumulator)
+    @Override
+    protected List<String> toConjuncts(List<Field> columns, Constraints constraints, List<TypeAndValue> accumulator, Map<String, String> partitionSplit)
+    {
+        List<String> conjuncts = new ArrayList<>();
+        for (Field column : columns) {
+            if (partitionSplit.containsKey(column.getName())) {
+                continue; // Ignore constraints on partition name as RDBMS does not contain these as columns. Presto will filter these values.
+            }
+            if (KdbTypes.list_of_char_type.name().equals(column.getFieldType().getMetadata().get(KdbMetadataHandler.KDBTYPE_KEY)))
+            {
+                LOGGER.info("list of char column is excluded from where caluse");
+                continue;
+            }
+            ArrowType type = column.getType();
+            if (constraints.getSummary() != null && !constraints.getSummary().isEmpty()) {
+                ValueSet valueSet = constraints.getSummary().get(column.getName());
+                if (valueSet != null) {
+                    conjuncts.add(toPredicate(column.getName(), column, valueSet, type, accumulator));
+                }
+            }
+        }
+        return conjuncts;
+    }
+
+    protected String toPredicate(String columnName, Field column, ValueSet valueSet, ArrowType type, List<TypeAndValue> accumulator)
     {
         List<String> disjuncts = new ArrayList<>();
         List<Object> singleValues = new ArrayList<>();
@@ -378,17 +400,17 @@ LOGGER.info("type:" + String.valueOf(_type) + " minortype:" + String.valueOf(min
 
         if (valueSet instanceof SortedRangeSet) {
             if (valueSet.isNone() && valueSet.isNullAllowed()) {
-                return toPredicateNull(columnName, type, accumulator);
+                return toPredicateNull(columnName, column, type, accumulator);
             }
 
             // we don't need to add disjunction(OR (colname IS NULL)) because
             if (valueSet.isNullAllowed()) {
-                disjuncts.add(toPredicateNull(columnName, type, accumulator));
+                disjuncts.add(toPredicateNull(columnName, column, type, accumulator));
             }
 
             Range rangeSpan = ((SortedRangeSet) valueSet).getSpan();
             if (!valueSet.isNullAllowed() && rangeSpan.getLow().isLowerUnbounded() && rangeSpan.getHigh().isUpperUnbounded()) {
-                return toPredicateNull(columnName, type, accumulator);
+                return toPredicateNull(columnName, column, type, accumulator);
             }
 
             for (Range range : valueSet.getRanges().getOrderedRanges()) {
@@ -400,10 +422,10 @@ LOGGER.info("type:" + String.valueOf(_type) + " minortype:" + String.valueOf(min
                     if (!range.getLow().isLowerUnbounded()) {
                         switch (range.getLow().getBound()) {
                             case ABOVE:
-                                rangeConjuncts.add(toPredicate(columnName, ">", range.getLow().getValue(), type, accumulator));
+                                rangeConjuncts.add(toPredicate(columnName, column, ">", range.getLow().getValue(), type, accumulator));
                                 break;
                             case EXACTLY:
-                                rangeConjuncts.add(toPredicate(columnName, ">=", range.getLow().getValue(), type, accumulator));
+                                rangeConjuncts.add(toPredicate(columnName, column, ">=", range.getLow().getValue(), type, accumulator));
                                 break;
                             case BELOW:
                                 throw new IllegalArgumentException("Low marker should never use BELOW bound");
@@ -416,10 +438,10 @@ LOGGER.info("type:" + String.valueOf(_type) + " minortype:" + String.valueOf(min
                             case ABOVE:
                                 throw new IllegalArgumentException("High marker should never use ABOVE bound");
                             case EXACTLY:
-                                rangeConjuncts.add(toPredicate(columnName, "<=", range.getHigh().getValue(), type, accumulator));
+                                rangeConjuncts.add(toPredicate(columnName, column, "<=", range.getHigh().getValue(), type, accumulator));
                                 break;
                             case BELOW:
-                                rangeConjuncts.add(toPredicate(columnName, "<", range.getHigh().getValue(), type, accumulator));
+                                rangeConjuncts.add(toPredicate(columnName, column, "<", range.getHigh().getValue(), type, accumulator));
                                 break;
                             default:
                                 throw new AssertionError("Unhandled bound: " + range.getHigh().getBound());
@@ -433,7 +455,7 @@ LOGGER.info("type:" + String.valueOf(_type) + " minortype:" + String.valueOf(min
 
             // Add back all of the possible single values either as an equality or an IN predicate
             if (singleValues.size() == 1) {
-                disjuncts.add(toPredicate(columnName, "=", Iterables.getOnlyElement(singleValues), type, accumulator));
+                disjuncts.add(toPredicate(columnName, column, "=", Iterables.getOnlyElement(singleValues), type, accumulator));
             }
             else if (singleValues.size() > 1) {
                 // for (Object value : singleValues) {
@@ -441,7 +463,7 @@ LOGGER.info("type:" + String.valueOf(_type) + " minortype:" + String.valueOf(min
                 // }
                 List<Object> literals = Lists.newArrayListWithCapacity(singleValues.size());
                 for(Object val : singleValues)
-                    literals.add(toLiteral(val, type, columnName, metadatahelper));
+                    literals.add(toLiteral(val, type, columnName, column));
                 String values = Joiner.on(",").join(literals);
                 disjuncts.add(quote(columnName) + " IN (" + values + ")");
             }
@@ -450,17 +472,17 @@ LOGGER.info("type:" + String.valueOf(_type) + " minortype:" + String.valueOf(min
         return "(" + Joiner.on(" OR ").join(disjuncts) + ")";
     }
 
-    protected String toPredicateNull(String columnName, ArrowType type, List<TypeAndValue> accumulator)
+    protected String toPredicateNull(String columnName, Field column, ArrowType type, List<TypeAndValue> accumulator)
     {
         // accumulator.add(new TypeAndValue(type, value));
-        return "(" + quote(columnName) + " = " + toLiteral(null, type, columnName, metadatahelper) + ")";
+        return "(" + quote(columnName) + " = " + toLiteral(null, type, columnName, column) + ")";
     }
 
 
-    protected String toPredicate(String columnName, String operator, Object value, ArrowType type, List<TypeAndValue> accumulator)
+    protected String toPredicate(String columnName, Field column, String operator, Object value, ArrowType type, List<TypeAndValue> accumulator)
     {
         // accumulator.add(new TypeAndValue(type, value));
-        return quote(columnName) + " " + operator + " " + toLiteral(value, type, columnName, metadatahelper);
+        return quote(columnName) + " " + operator + " " + toLiteral(value, type, columnName, column);
     }
 
     @Override
