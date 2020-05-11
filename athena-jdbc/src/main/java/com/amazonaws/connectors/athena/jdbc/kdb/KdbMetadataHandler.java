@@ -75,6 +75,7 @@ public class KdbMetadataHandler
     private static final Logger LOGGER = LoggerFactory.getLogger(KdbMetadataHandler.class);
     private static final int MAX_SPLITS_PER_REQUEST = 1000_000;
     public static final String KDBTYPE_KEY = "kdbtype";
+    public static final String DEFAULT_SCHEMA_NAME = "schema1";
     
     /**
      * Instantiates handler to be used by Lambda function directly.
@@ -105,18 +106,9 @@ public class KdbMetadataHandler
     protected Set<String> listDatabaseNames(final Connection jdbcConnection)
             throws SQLException
     {
-//        try (ResultSet resultSet = jdbcConnection.getMetaData().getSchemas()) {
-            ImmutableSet.Builder<String> schemaNames = ImmutableSet.builder();
-            schemaNames.add("schema1");
-        //     while (resultSet.next()) {
-        //         String schemaName = resultSet.getString("TABLE_SCHEM");
-        //         // skip internal schemas
-        //         if (!schemaName.equals("information_schema")) {
-        //             schemaNames.add(schemaName);
-        //         }
-        //     }
-            return schemaNames.build();
-        // }
+        ImmutableSet.Builder<String> schemaNames = ImmutableSet.builder();
+        schemaNames.add(DEFAULT_SCHEMA_NAME);
+        return schemaNames.build();
     }
 
     @Override
@@ -124,7 +116,9 @@ public class KdbMetadataHandler
             throws SQLException
     {
         try (Statement stmt = jdbcConnection.createStatement()) {
-            try (ResultSet resultSet = stmt.executeQuery("q) flip ( `TABLE_NAME`dummy ! ( tables[]; tables[] ) )")) {
+// /            final String SCHEMA_QUERY = "q) flip ( `TABLE_NAME`dummy ! ( tables[]; tables[] ) )";
+            final String SCHEMA_QUERY = "q) flip ( `TABLE_NAME`TABLE_SCHEM ! ( tables[]; (count(tables[]))#(enlist \"" + DEFAULT_SCHEMA_NAME + "\") ) )";
+            try (ResultSet resultSet = stmt.executeQuery(SCHEMA_QUERY)) {
                 ImmutableList.Builder<TableName> list = ImmutableList.builder();
                 while (resultSet.next()) {
                     list.add(getSchemaTableName(resultSet));
@@ -134,34 +128,34 @@ public class KdbMetadataHandler
         }
     }
 
-    @Override
-    protected TableName getSchemaTableName(final ResultSet resultSet)
-            throws SQLException
-    {
-        return new TableName(
-                "schema1",
-                resultSet.getString("TABLE_NAME"));
-    }
+    // @Override
+    // protected TableName getSchemaTableName(final ResultSet resultSet)
+    //         throws SQLException
+    // {
+    //     return new TableName(
+    //             DEFAULT_SCHEMA_NAME,
+    //             resultSet.getString("TABLE_NAME"));
+    // }
 
     @Override
     protected Schema getSchema(Connection jdbcConnection, TableName tableName, Schema partitionSchema)
             throws SQLException
     {
-        //only following are supported in Athena
-    // BIT(Types.MinorType.BIT),
-    // DATEMILLI(Types.MinorType.DATEMILLI),
-    // DATEDAY(Types.MinorType.DATEDAY),
-    // FLOAT8(Types.MinorType.FLOAT8),
-    // FLOAT4(Types.MinorType.FLOAT4),
-    // INT(Types.MinorType.INT),
-    // TINYINT(Types.MinorType.TINYINT),
-    // SMALLINT(Types.MinorType.SMALLINT),
-    // BIGINT(Types.MinorType.BIGINT),
-    // VARBINARY(Types.MinorType.VARBINARY),
-    // DECIMAL(Types.MinorType.DECIMAL),
-    // VARCHAR(Types.MinorType.VARCHAR),
-    // STRUCT(Types.MinorType.STRUCT),
-    // LIST(Types.MinorType.LIST);
+        //Plese note that only following are supported in Athena as of 2020.05
+        // BIT(Types.MinorType.BIT),
+        // DATEMILLI(Types.MinorType.DATEMILLI),
+        // DATEDAY(Types.MinorType.DATEDAY),
+        // FLOAT8(Types.MinorType.FLOAT8),
+        // FLOAT4(Types.MinorType.FLOAT4),
+        // INT(Types.MinorType.INT),
+        // TINYINT(Types.MinorType.TINYINT),
+        // SMALLINT(Types.MinorType.SMALLINT),
+        // BIGINT(Types.MinorType.BIGINT),
+        // VARBINARY(Types.MinorType.VARBINARY),
+        // DECIMAL(Types.MinorType.DECIMAL),
+        // VARCHAR(Types.MinorType.VARCHAR),
+        // STRUCT(Types.MinorType.STRUCT),
+        // LIST(Types.MinorType.LIST);
 
         LOGGER.info("getSchema...");
         SchemaBuilder schemaBuilder = SchemaBuilder.newBuilder();
