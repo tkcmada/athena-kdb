@@ -482,7 +482,7 @@ public class KdbQueryStringBuilder
             }
         }
 
-        return "(" + Joiner.on(" OR ").join(disjuncts) + ")";
+        return "(" + Joiner.on(" or ").join(disjuncts) + ")";
     }
 
     protected String toPredicateNull(String columnName, Field column, ArrowType type, List<TypeAndValue> accumulator)
