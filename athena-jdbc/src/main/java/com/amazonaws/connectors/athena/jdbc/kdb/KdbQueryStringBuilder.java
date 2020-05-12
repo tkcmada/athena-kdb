@@ -196,12 +196,19 @@ public class KdbQueryStringBuilder
     {        
         LOGGER.info("column:" + String.valueOf(columnName) + " value:" + String.valueOf(value));
         String literal = toLiteral(value, Types.getMinorTypeForArrowType(type), KdbTypes.valueOf(column.getMetadata().get(KdbMetadataHandler.KDBTYPE_KEY)));
-        LOGGER.info("literal:" + String.valueOf(literal));
         return literal;
     }
 
     @VisibleForTesting
     static String toLiteral(Object value, Types.MinorType minorTypeForArrowType, KdbTypes kdbtype)
+    {
+        LOGGER.info("kdbtype:" + String.valueOf(kdbtype) + " minorTypeForArrowType:" + String.valueOf(minorTypeForArrowType) + " value:" + String.valueOf(value) + (value == null ? "null" : value.getClass().getName()));
+        final String literal = _toLiteral(value, minorTypeForArrowType, kdbtype);
+        LOGGER.info("literal:" + String.valueOf(literal));
+        return literal;
+    }
+
+    static private String _toLiteral(Object value, Types.MinorType minorTypeForArrowType, KdbTypes kdbtype)
     {
         LOGGER.info("minortype:" + String.valueOf(minorTypeForArrowType) + " kdbtype:" + String.valueOf(kdbtype) + " value:" + String.valueOf(value) + " valuetype:" + (value == null ? "null" : value.getClass().getName()));
 
@@ -304,6 +311,27 @@ public class KdbQueryStringBuilder
                         else {
                             return "\"" + value.toString() + "\"";
                         }
+                    case time_type:
+                        if (value == null) {
+                            return "0Nt";
+                        }
+                        else {
+                            return value.toString();
+                        }
+                    case timespan_type:
+                        if (value == null) {
+                            return "0Nn";
+                        }
+                        else {
+                            return value.toString();
+                        }
+                    case timestamp_type:
+                        if (value == null) {
+                            return "0Np";
+                        }
+                        else {
+                            return value.toString();
+                        }                        
                     case list_of_char_type:
                         throw new UnsupportedOperationException("list of char type cannot be pushed down to where statement");
                     default:

@@ -22,7 +22,6 @@ package com.amazonaws.connectors.athena.jdbc.kdb;
 import com.amazonaws.athena.connector.lambda.data.FieldBuilder;
 import com.amazonaws.athena.connector.lambda.data.SchemaBuilder;
 import com.amazonaws.athena.connector.lambda.data.writers.extractors.DateDayExtractor;
-import com.amazonaws.athena.connector.lambda.data.writers.extractors.Extractor;
 import com.amazonaws.athena.connector.lambda.data.writers.holders.NullableVarCharHolder;
 import com.amazonaws.athena.connector.lambda.domain.Split;
 import com.amazonaws.athena.connector.lambda.domain.TableName;
@@ -34,7 +33,6 @@ import com.amazonaws.athena.connector.lambda.domain.predicate.ValueSet;
 import com.amazonaws.connectors.athena.jdbc.connection.DatabaseConnectionConfig;
 import com.amazonaws.connectors.athena.jdbc.connection.JdbcConnectionFactory;
 import com.amazonaws.connectors.athena.jdbc.connection.JdbcCredentialProvider;
-import com.amazonaws.connectors.athena.jdbc.manager.JdbcMetadataHandler;
 import com.amazonaws.connectors.athena.jdbc.manager.JdbcSplitQueryBuilder;
 import com.amazonaws.services.athena.AmazonAthena;
 import com.amazonaws.services.s3.AmazonS3;
@@ -47,7 +45,6 @@ import org.apache.arrow.vector.holders.NullableDateDayHolder;
 import org.apache.arrow.vector.holders.NullableFloat8Holder;
 import org.apache.arrow.vector.types.Types;
 import org.apache.arrow.vector.types.pojo.Schema;
-import org.joda.time.LocalDate;
 import org.joda.time.LocalDateTime;
 import org.junit.Assert;
 import org.junit.Before;
@@ -104,10 +101,12 @@ public class KdbRecordHandlerTest
         schemaBuilder.addField(KdbMetadataHandler.newField("testCol7", Types.MinorType.FLOAT8, KdbTypes.float_type));
         schemaBuilder.addField(KdbMetadataHandler.newField("testCol8", Types.MinorType.BIT, KdbTypes.bit_type));
         schemaBuilder.addField(KdbMetadataHandler.newField("testCol9", Types.MinorType.DATEDAY, KdbTypes.date_type));
-        schemaBuilder.addField(KdbMetadataHandler.newField("testCol10", Types.MinorType.DATEMILLI, KdbTypes.timestamp_type));
+        schemaBuilder.addField(KdbMetadataHandler.newField("z"        , Types.MinorType.VARCHAR, KdbTypes.timestamp_type));
         schemaBuilder.addField(KdbMetadataHandler.newField("g"        , Types.MinorType.VARCHAR, KdbTypes.guid_type));
         schemaBuilder.addField(KdbMetadataHandler.newField("str"      , Types.MinorType.VARCHAR, KdbTypes.list_of_char_type));
         schemaBuilder.addField(KdbMetadataHandler.newField("c"        , Types.MinorType.VARCHAR, KdbTypes.char_type));
+        schemaBuilder.addField(KdbMetadataHandler.newField("t"        , Types.MinorType.VARCHAR, KdbTypes.time_type));
+        schemaBuilder.addField(KdbMetadataHandler.newField("ts"       , Types.MinorType.VARCHAR, KdbTypes.timespan_type));
         schemaBuilder.addField(KdbMetadataHandler.newField("partition_name", Types.MinorType.INT, null));
         schema = schemaBuilder.build();
     }
@@ -126,7 +125,7 @@ public class KdbRecordHandlerTest
         // schemaBuilder.addField(FieldBuilder.newBuilder("testCol7", Types.MinorType.FLOAT8.getType()).build());
         // schemaBuilder.addField(FieldBuilder.newBuilder("testCol8", Types.MinorType.BIT.getType()).build());
         schemaBuilder.addField(FieldBuilder.newBuilder("d", Types.MinorType.DATEDAY.getType()).build());
-        // schemaBuilder.addField(FieldBuilder.newBuilder("testCol10", Types.MinorType.DATEMILLI.getType()).build());
+        // schemaBuilder.addField(FieldBuilder.newBuilder("z", Types.MinorType.DATEMILLI.getType()).build());
         // schemaBuilder.addField(FieldBuilder.newBuilder("g"        , Types.MinorType.VARCHAR.getType()).build());
         schemaBuilder.addField(FieldBuilder.newBuilder("partition_name", Types.MinorType.VARCHAR.getType()).build());
         Schema schema = schemaBuilder.build();  
@@ -200,10 +199,12 @@ public class KdbRecordHandlerTest
         ValueSet valueSet7 = getSingleValueSet(1.2d);
         ValueSet valueSet8 = getSingleValueSet(true);
         ValueSet valueSet9 = getSingleValueSet(new LocalDateTime(2020, 1, 1, 0, 0, 0, 0));
-        ValueSet valueSet10 = getSingleValueSet(new LocalDateTime(2020, 1, 1, 2, 3, 4, 5));
+        ValueSet valueSet10 = getSingleValueSet("2020.01.01D02:03:04.005006007"); //timespan new LocalDateTime(2020, 1, 1, 2, 3, 4, 5)
         ValueSet valueSet11 = getSingleValueSet("1234-5678");
         ValueSet valueSet_str = getSingleValueSet("xyz");
-        ValueSet valueSet_c = getSingleValueSet("w");
+        ValueSet valueSet_c   = getSingleValueSet("w");
+        ValueSet valueSet_t   = getSingleValueSet("03:03:04.005");
+        ValueSet valueSet_ts  = getSingleValueSet("04:03:04.005006007");
 
         Constraints constraints = Mockito.mock(Constraints.class);
         Mockito.when(constraints.getSummary()).thenReturn(new ImmutableMap.Builder<String, ValueSet>()
@@ -216,13 +217,15 @@ public class KdbRecordHandlerTest
                 .put("testCol7", valueSet7)
                 .put("testCol8", valueSet8)
                 .put("testCol9", valueSet9)
-                .put("testCol10", valueSet10)
+                .put("z"        , valueSet10)
                 .put("g"        , valueSet11)
                 .put("str"      , valueSet_str)
                 .put("c"        , valueSet_c)
+                .put("t"        , valueSet_t)
+                .put("ts"       , valueSet_ts)
                 .build());
 
-        String expectedSql = "q) select testCol1, testCol2, testCol3, r, testCol5, testCol6, testCol7, testCol8, testCol9, testCol10, g, str, c from testTable PARTITION(p0)  where (testCol1 IN (1i,2i)) , (testCol2 = `abc) , ((testCol3 > 2 , testCol3 <= 20)) , (r = 1.5e) , (testCol5 = 1i) , (testCol6 = 0i) , (testCol7 = 1.2) , (testCol8 = 1b) , (testCol9 = 2020.01.01) , (testCol10 = 2020.01.01D02:03:04.005000000) , (g = \"G\"$\"1234-5678\") , (c = \"w\")";
+        String expectedSql = "q) select testCol1, testCol2, testCol3, r, testCol5, testCol6, testCol7, testCol8, testCol9, z, g, str, c, t, ts from testTable PARTITION(p0)  where (testCol1 IN (1i,2i)) , (testCol2 = `abc) , ((testCol3 > 2 , testCol3 <= 20)) , (r = 1.5e) , (testCol5 = 1i) , (testCol6 = 0i) , (testCol7 = 1.2) , (testCol8 = 1b) , (testCol9 = 2020.01.01) , (z = 2020.01.01D02:03:04.005006007) , (g = \"G\"$\"1234-5678\") , (c = \"w\") , (t = 03:03:04.005) , (ts = 04:03:04.005006007)";
         PreparedStatement expectedPreparedStatement = Mockito.mock(PreparedStatement.class);
         Mockito.when(this.connection.prepareStatement(Mockito.eq(expectedSql))).thenReturn(expectedPreparedStatement);
 
@@ -254,6 +257,8 @@ public class KdbRecordHandlerTest
         ValueSet valueSet11 = getSingleValueSetOnlyNull();
         ValueSet valueSet_str = getSingleValueSetOnlyNull();
         ValueSet valueSet_c = getSingleValueSetOnlyNull();
+        ValueSet valueSet_t = getSingleValueSetOnlyNull();
+        ValueSet valueSet_ts= getSingleValueSetOnlyNull();
 
         Constraints constraints = Mockito.mock(Constraints.class);
         Mockito.when(constraints.getSummary()).thenReturn(new ImmutableMap.Builder<String, ValueSet>()
@@ -266,30 +271,21 @@ public class KdbRecordHandlerTest
                 .put("testCol7", valueSet7)
                 .put("testCol8", valueSet8)
                 .put("testCol9", valueSet9)
-                .put("testCol10", valueSet10)
+                .put("z", valueSet10)
                 .put("g"        , valueSet11)
                 .put("str"      , valueSet_str)
                 .put("c"        , valueSet_c)
+                .put("t"        , valueSet_t)
+                .put("ts"       , valueSet_ts)
                 .build());
 
-        String expectedSql = "q) select testCol1, testCol2, testCol3, r, testCol5, testCol6, testCol7, testCol8, testCol9, testCol10, g, str, c from testTable PARTITION(p0)  where (testCol1 = 0Ni) , (testCol2 = ` ) , (testCol3 = 0Nj) , (r = 0Ne) , (testCol5 = 0Nh) , (testCol6 = 0x00) , (testCol7 = 0n) , (testCol8 = 0b) , (testCol9 = 0Nd) , (testCol10 = 0Np) , (g = 0Ng) , (c = \" \")";
+        String expectedSql = "q) select testCol1, testCol2, testCol3, r, testCol5, testCol6, testCol7, testCol8, testCol9, z, g, str, c, t, ts from testTable PARTITION(p0)  where (testCol1 = 0Ni) , (testCol2 = ` ) , (testCol3 = 0Nj) , (r = 0Ne) , (testCol5 = 0Nh) , (testCol6 = 0x00) , (testCol7 = 0n) , (testCol8 = 0b) , (testCol9 = 0Nd) , (z = 0Np) , (g = 0Ng) , (c = \" \") , (t = 0Nt) , (ts = 0Nn)";
         PreparedStatement expectedPreparedStatement = Mockito.mock(PreparedStatement.class);
         Mockito.when(this.connection.prepareStatement(Mockito.eq(expectedSql))).thenReturn(expectedPreparedStatement);
 
         PreparedStatement preparedStatement = this.recordHandler.buildSplitSql(this.connection, "testCatalogName", tableName, schema, constraints, split);
 
         Assert.assertEquals(expectedPreparedStatement, preparedStatement);
-        // Mockito.verify(preparedStatement, Mockito.times(1)).setInt(10, 1);
-        // Mockito.verify(preparedStatement, Mockito.times(1)).setInt(11, 2);
-        // Mockito.verify(preparedStatement, Mockito.times(1)).setString(6, "1");
-        // Mockito.verify(preparedStatement, Mockito.times(1)).setString(7, "10");
-        // Mockito.verify(preparedStatement, Mockito.times(1)).setLong(4, 2L);
-        // Mockito.verify(preparedStatement, Mockito.times(1)).setLong(5, 20L);
-        // Mockito.verify(preparedStatement, Mockito.times(1)).setFloat(9, 1.1F);
-        // Mockito.verify(preparedStatement, Mockito.times(1)).setShort(8, (short) 1);
-        // Mockito.verify(preparedStatement, Mockito.times(1)).setByte(2, (byte) 0);
-        // Mockito.verify(preparedStatement, Mockito.times(1)).setDouble(1, 1.2d);
-        // Mockito.verify(preparedStatement, Mockito.times(1)).setBoolean(3, true);
     }
 
 

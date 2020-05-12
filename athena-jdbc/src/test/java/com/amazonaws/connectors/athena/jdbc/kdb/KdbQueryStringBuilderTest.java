@@ -19,48 +19,12 @@
  */
 package com.amazonaws.connectors.athena.jdbc.kdb;
 
-import com.amazonaws.athena.connector.lambda.data.FieldBuilder;
-import com.amazonaws.athena.connector.lambda.data.SchemaBuilder;
-import com.amazonaws.athena.connector.lambda.data.writers.extractors.DateDayExtractor;
-import com.amazonaws.athena.connector.lambda.data.writers.extractors.Extractor;
-import com.amazonaws.athena.connector.lambda.domain.Split;
-import com.amazonaws.athena.connector.lambda.domain.TableName;
-import com.amazonaws.athena.connector.lambda.domain.predicate.Constraints;
-import com.amazonaws.athena.connector.lambda.domain.predicate.Marker;
-import com.amazonaws.athena.connector.lambda.domain.predicate.Range;
-import com.amazonaws.athena.connector.lambda.domain.predicate.SortedRangeSet;
-import com.amazonaws.athena.connector.lambda.domain.predicate.ValueSet;
-import com.amazonaws.connectors.athena.jdbc.connection.DatabaseConnectionConfig;
-import com.amazonaws.connectors.athena.jdbc.connection.JdbcConnectionFactory;
-import com.amazonaws.connectors.athena.jdbc.connection.JdbcCredentialProvider;
-import com.amazonaws.connectors.athena.jdbc.manager.JdbcMetadataHandler;
-import com.amazonaws.connectors.athena.jdbc.manager.JdbcSplitQueryBuilder;
-import com.amazonaws.services.athena.AmazonAthena;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.secretsmanager.AWSSecretsManager;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
-
-import org.apache.arrow.vector.holders.NullableDateDayHolder;
-import org.apache.arrow.vector.types.Types;
 import org.apache.arrow.vector.types.Types.MinorType;
-import org.apache.arrow.vector.types.pojo.Schema;
-import org.joda.time.LocalDate;
-import org.joda.time.LocalDateTime;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.sql.Connection;
-import java.sql.Date;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.Collections;
 
 public class KdbQueryStringBuilderTest
 {
@@ -101,7 +65,7 @@ public class KdbQueryStringBuilderTest
         //timestamp
         Assert.assertEquals("1970.01.02D00:00:00.001002003",
             KdbQueryStringBuilder.toLiteral("1970.01.02D00:00:00.001002003", MinorType.VARCHAR, KdbTypes.timestamp_type));
-        Assert.assertEquals("0Nn",
+        Assert.assertEquals("0Np",
             KdbQueryStringBuilder.toLiteral(null                           , MinorType.VARCHAR, KdbTypes.timestamp_type));
 
     }
