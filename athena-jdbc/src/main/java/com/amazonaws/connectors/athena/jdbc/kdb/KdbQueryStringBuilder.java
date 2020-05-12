@@ -42,10 +42,14 @@ import org.slf4j.LoggerFactory;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -188,7 +192,23 @@ public class KdbQueryStringBuilder
         @Override
         protected DateTimeFormatter initialValue()
         {
-            return DateTimeFormat.forPattern("HH:mm:ss.SSSSSS000");
+            return DateTimeFormat.forPattern("HH:mm:ss.SSS000000");
+        }
+    };
+
+    private static final ThreadLocal<Function<Timestamp, String>> TIMESTAMP_FORMAT = new ThreadLocal<Function<Timestamp, String>>()
+    {
+        final SimpleDateFormat datetime_format = new SimpleDateFormat("yyyy.MM.dd'D'HH:mm:ss");
+        final DecimalFormat nano_format = new DecimalFormat("000000000");
+        @Override
+        protected Function<Timestamp, String> initialValue()
+        {
+            return new Function<Timestamp, String>() {
+                @Override
+                public String apply(Timestamp value) {
+                    return datetime_format.format(value) + "." + nano_format.format(value.getNanos());
+                }
+            };
         }
     };
 
@@ -330,7 +350,13 @@ public class KdbQueryStringBuilder
                             return "0Np";
                         }
                         else {
-                            return value.toString();
+                            if (value instanceof Timestamp) {
+                                final Timestamp timestamp = (Timestamp) value;
+                                return TIMESTAMP_FORMAT.get().apply(timestamp);
+                            }
+                            else {
+                                return value.toString();
+                            }
                         }                        
                     case list_of_char_type:
                         throw new UnsupportedOperationException("list of char type cannot be pushed down to where statement");

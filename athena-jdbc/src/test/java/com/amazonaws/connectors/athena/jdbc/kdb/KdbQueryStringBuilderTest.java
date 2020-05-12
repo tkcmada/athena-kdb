@@ -19,6 +19,8 @@
  */
 package com.amazonaws.connectors.athena.jdbc.kdb;
 
+import java.sql.Timestamp;
+
 import org.apache.arrow.vector.types.Types.MinorType;
 import org.junit.Assert;
 import org.junit.Before;
@@ -62,11 +64,13 @@ public class KdbQueryStringBuilderTest
         Assert.assertEquals("0Nn",
             KdbQueryStringBuilder.toLiteral(null                , MinorType.VARCHAR, KdbTypes.timespan_type));
 
-        //timestamp
+        //timestamp as string
         Assert.assertEquals("1970.01.02D00:00:00.001002003",
             KdbQueryStringBuilder.toLiteral("1970.01.02D00:00:00.001002003", MinorType.VARCHAR, KdbTypes.timestamp_type));
         Assert.assertEquals("0Np",
             KdbQueryStringBuilder.toLiteral(null                           , MinorType.VARCHAR, KdbTypes.timestamp_type));
-
+        //timestamp as Timestamp
+        Assert.assertEquals("2020.01.02D03:04:05.001000000",
+            KdbQueryStringBuilder.toLiteral(new Timestamp(2020 - 1900, 0, 2, 3, 4, 5, 1000000), MinorType.VARCHAR, KdbTypes.timestamp_type));
     }
 }

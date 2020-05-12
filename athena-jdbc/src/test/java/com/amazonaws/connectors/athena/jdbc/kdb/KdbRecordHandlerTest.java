@@ -174,15 +174,25 @@ public class KdbRecordHandlerTest
     }
 
     @Test
-    public void newVarCharExtractor_timestamp() throws Exception
+    public void newVarCharExtractor_timestamp1() throws Exception
     {
-        LOGGER.info("newVarCharExtractor_timestamp starting...");
         ResultSet rs = Mockito.mock(ResultSet.class);
-        Mockito.when(rs.getObject("str")).thenReturn(new Timestamp(2020, 0, 2, 3, 4, 5, 0));
+        Mockito.when(rs.getObject("str")).thenReturn(new Timestamp(2020 - 1900, 0, 2, 3, 4, 5, 0));
         NullableVarCharHolder dst = new NullableVarCharHolder();
-        this.recordHandler.newVarcharExtractor(rs, "str", KdbMetadataHandler.newField("str", Types.MinorType.VARCHAR, KdbTypes.list_of_char_type)).extract(null, dst);
+        this.recordHandler.newVarcharExtractor(rs, "str", KdbMetadataHandler.newField("str", Types.MinorType.VARCHAR, KdbTypes.timestamp_type)).extract(null, dst);
         Assert.assertEquals("2020.01.02D03:04:05.000000000", dst.value);
     }
+
+    @Test
+    public void newVarCharExtractor_timestamp2() throws Exception
+    {
+        ResultSet rs = Mockito.mock(ResultSet.class);
+        Mockito.when(rs.getObject("str")).thenReturn(new Timestamp(2020 - 1900, 0, 2, 3, 4, 5, 1000000));
+        NullableVarCharHolder dst = new NullableVarCharHolder();
+        this.recordHandler.newVarcharExtractor(rs, "str", KdbMetadataHandler.newField("str", Types.MinorType.VARCHAR, KdbTypes.timestamp_type)).extract(null, dst);
+        Assert.assertEquals("2020.01.02D03:04:05.001000000", dst.value);
+    }
+
 
     @Test
     public void newVarCharExtractor_timespan() throws Exception
@@ -191,7 +201,7 @@ public class KdbRecordHandlerTest
         ResultSet rs = Mockito.mock(ResultSet.class);
         Mockito.when(rs.getObject("str")).thenReturn("03:04:05.6"); //actually this object type is Kx$Timespan
         NullableVarCharHolder dst = new NullableVarCharHolder();
-        this.recordHandler.newVarcharExtractor(rs, "str", KdbMetadataHandler.newField("str", Types.MinorType.VARCHAR, KdbTypes.list_of_char_type)).extract(null, dst);
+        this.recordHandler.newVarcharExtractor(rs, "str", KdbMetadataHandler.newField("str", Types.MinorType.VARCHAR, KdbTypes.timespan_type)).extract(null, dst);
         Assert.assertEquals("03:04:05.600000000", dst.value);
     }
 

@@ -44,6 +44,8 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.secretsmanager.AWSSecretsManager;
 import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder;
 import com.google.common.annotations.VisibleForTesting;
+
+import org.apache.arrow.vector.types.Types;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.commons.lang3.Validate;
@@ -54,6 +56,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.Map;
 
 /**
@@ -179,7 +182,8 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
                         dst.value = timespanstr.substring(0, 18);
                         break;
                     case 'p': //timestamp
-                        dst.value = value.toString();
+                        final Timestamp timestamp = (Timestamp)value;
+                        dst.value = KdbQueryStringBuilder.toLiteral(timestamp, Types.MinorType.VARCHAR, KdbTypes.timestamp_type);
                         break;
                     default:
                         dst.value = value.toString();
