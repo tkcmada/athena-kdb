@@ -19,55 +19,17 @@
  */
 package com.amazonaws.connectors.athena.jdbc.kdb;
 
-import com.amazonaws.athena.connector.lambda.data.BlockAllocator;
-import com.amazonaws.athena.connector.lambda.data.BlockAllocatorImpl;
-import com.amazonaws.athena.connector.lambda.data.BlockUtils;
-import com.amazonaws.athena.connector.lambda.data.FieldBuilder;
 import com.amazonaws.athena.connector.lambda.data.SchemaBuilder;
-import com.amazonaws.athena.connector.lambda.domain.Split;
-import com.amazonaws.athena.connector.lambda.domain.TableName;
-import com.amazonaws.athena.connector.lambda.domain.predicate.Constraints;
-import com.amazonaws.athena.connector.lambda.metadata.GetSplitsRequest;
-import com.amazonaws.athena.connector.lambda.metadata.GetSplitsResponse;
-import com.amazonaws.athena.connector.lambda.metadata.GetTableLayoutRequest;
-import com.amazonaws.athena.connector.lambda.metadata.GetTableLayoutResponse;
-import com.amazonaws.athena.connector.lambda.security.FederatedIdentity;
 import com.amazonaws.connectors.athena.jdbc.TestBase;
-import com.amazonaws.connectors.athena.jdbc.connection.DatabaseConnectionConfig;
-import com.amazonaws.connectors.athena.jdbc.connection.JdbcConnectionFactory;
-import com.amazonaws.connectors.athena.jdbc.connection.JdbcCredentialProvider;
-import com.amazonaws.services.athena.AmazonAthena;
-import com.amazonaws.services.secretsmanager.AWSSecretsManager;
-import com.amazonaws.services.secretsmanager.model.GetSecretValueRequest;
-import com.amazonaws.services.secretsmanager.model.GetSecretValueResult;
-import com.google.thirdparty.publicsuffix.PublicSuffixPatterns;
 
 import org.apache.arrow.vector.types.DateUnit;
-import org.apache.arrow.vector.types.TimeUnit;
 import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Types;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 public class KdbMetadataHandlerTest
         extends TestBase

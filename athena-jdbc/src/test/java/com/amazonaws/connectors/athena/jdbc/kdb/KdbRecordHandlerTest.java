@@ -58,6 +58,7 @@ import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.Collections;
 
 public class KdbRecordHandlerTest
@@ -107,7 +108,7 @@ public class KdbRecordHandlerTest
         schemaBuilder.addField(KdbMetadataHandler.newField("c"        , Types.MinorType.VARCHAR, KdbTypes.char_type));
         schemaBuilder.addField(KdbMetadataHandler.newField("t"        , Types.MinorType.VARCHAR, KdbTypes.time_type));
         schemaBuilder.addField(KdbMetadataHandler.newField("ts"       , Types.MinorType.VARCHAR, KdbTypes.timespan_type));
-        schemaBuilder.addField(KdbMetadataHandler.newField("partition_name", Types.MinorType.INT, null));
+        schemaBuilder.addField(KdbMetadataHandler.newField("partition_name", Types.MinorType.VARCHAR, null));
         schema = schemaBuilder.build();
     }
 
@@ -170,6 +171,28 @@ public class KdbRecordHandlerTest
         NullableVarCharHolder dst = new NullableVarCharHolder();
         this.recordHandler.newVarcharExtractor(rs, "str", KdbMetadataHandler.newField("str", Types.MinorType.VARCHAR, KdbTypes.list_of_char_type)).extract(null, dst);
         Assert.assertEquals("abc", dst.value);
+    }
+
+    @Test
+    public void newVarCharExtractor_timestamp() throws Exception
+    {
+        LOGGER.info("newVarCharExtractor_timestamp starting...");
+        ResultSet rs = Mockito.mock(ResultSet.class);
+        Mockito.when(rs.getObject("str")).thenReturn(new Timestamp(2020, 0, 2, 3, 4, 5, 0));
+        NullableVarCharHolder dst = new NullableVarCharHolder();
+        this.recordHandler.newVarcharExtractor(rs, "str", KdbMetadataHandler.newField("str", Types.MinorType.VARCHAR, KdbTypes.list_of_char_type)).extract(null, dst);
+        Assert.assertEquals("2020.01.02D03:04:05.000000000", dst.value);
+    }
+
+    @Test
+    public void newVarCharExtractor_timespan() throws Exception
+    {
+        LOGGER.info("newVarCharExtractor_timespan starting...");
+        ResultSet rs = Mockito.mock(ResultSet.class);
+        Mockito.when(rs.getObject("str")).thenReturn("03:04:05.6"); //actually this object type is Kx$Timespan
+        NullableVarCharHolder dst = new NullableVarCharHolder();
+        this.recordHandler.newVarcharExtractor(rs, "str", KdbMetadataHandler.newField("str", Types.MinorType.VARCHAR, KdbTypes.list_of_char_type)).extract(null, dst);
+        Assert.assertEquals("03:04:05.600000000", dst.value);
     }
 
     @Test

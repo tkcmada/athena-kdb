@@ -21,19 +21,26 @@ package com.amazonaws.connectors.athena.jdbc.kdb;
 
 public enum KdbTypes
 {
-    bit_type,
-    byte_type,
-    char_type,
-    real_type,
-    short_type,
-    int_type,
-    long_type,
-    float_type,
-    date_type,
-    time_type,
-    timespan_type,
-    timestamp_type,
-    guid_type,
-    symbol_type,
-    list_of_char_type
+    bit_type('b'),
+    byte_type('x'),
+    char_type('c'),
+    short_type('h'),
+    int_type('i'),
+    long_type('j'),
+    real_type('r'),
+    float_type('f'),
+    date_type('d'),
+    time_type('t'),
+    timespan_type('n'),
+    timestamp_type('p'),
+    guid_type('g'),
+    symbol_type('s'),
+    list_of_char_type('C');
+
+    public final char kdbtype;
+    
+    private KdbTypes(char kdbtype)
+    {
+        this.kdbtype = kdbtype;
+    }
 }

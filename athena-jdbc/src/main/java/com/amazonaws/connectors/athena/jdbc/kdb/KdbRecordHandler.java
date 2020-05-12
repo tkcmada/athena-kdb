@@ -171,7 +171,19 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
         {
             Object value = resultSet.getObject(fieldName);
             if (value != null) {
-                dst.value = value.toString();
+                final char kdbtypechar = KdbMetadataHandler.getKdbTypeChar(field);
+                switch(kdbtypechar) {
+                    case 'n': //timespan
+                        final String timespanstr = value.toString() + "000000000";
+                        //00:00:00.123456789
+                        dst.value = timespanstr.substring(0, 18);
+                        break;
+                    case 'p': //timestamp
+                        dst.value = value.toString();
+                        break;
+                    default:
+                        dst.value = value.toString();
+                }
             }
             dst.isSet = resultSet.wasNull() ? 0 : 1;
         };

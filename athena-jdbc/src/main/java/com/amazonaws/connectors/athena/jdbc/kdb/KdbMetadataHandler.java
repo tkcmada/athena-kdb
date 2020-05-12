@@ -75,6 +75,7 @@ public class KdbMetadataHandler
     private static final Logger LOGGER = LoggerFactory.getLogger(KdbMetadataHandler.class);
     private static final int MAX_SPLITS_PER_REQUEST = 1000_000;
     public static final String KDBTYPE_KEY = "kdbtype";
+    public static final String KDBTYPECHAR_KEY = "kdbtypechar";
     public static final String DEFAULT_SCHEMA_NAME = "schema1";
     
     /**
@@ -370,8 +371,17 @@ public class KdbMetadataHandler
     @VisibleForTesting
     static Field newField(String colname, Types.MinorType minorType, KdbTypes kdbtype)
     {
-        Map<String, String> metadata = kdbtype == null ? Collections.emptyMap() : ImmutableMap.<String, String>builder().put(KDBTYPE_KEY, kdbtype.name()).build();
+        final Map<String, String> metadata = ImmutableMap.<String, String>builder()
+            .put(KDBTYPE_KEY    , kdbtype == null ? "null" : kdbtype.name())
+            .put(KDBTYPECHAR_KEY, kdbtype == null ? " " : String.valueOf(kdbtype.kdbtype))
+            .build();
         FieldType fieldType = new FieldType(true, minorType.getType(), null, metadata);
         return new Field(colname, fieldType, null);
+    }
+
+    @VisibleForTesting
+    static char getKdbTypeChar(Field field)
+    {
+        return field.getMetadata().get(KDBTYPECHAR_KEY).charAt(0);
     }
 }
