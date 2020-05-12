@@ -194,13 +194,13 @@ public class KdbMetadataHandler
                             break;
                         case 'p': //timestamp
                             //Athena doesn't support DATENANO so map to VARCHAR for now
-                            schemaBuilder.addField(newField(colname, Types.MinorType.DATEMILLI, KdbTypes.timestamp_type));
+                            schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.timestamp_type));
                             break;
-                        case 't': //time //Athena doesn't support TIMESEC
-                            //just map to VARCHAR for now
-                            schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.time_type));
-                            break;
-                        case 'n': //time //Athena doesn't support TIMENANO
+                        // case 't': //time //Athena doesn't support TIMEMILL
+                        //     //Jdbc automatically map this column to java.sql.Time which has only sec precision
+                        //     schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.time_type));
+                        //     break;
+                        case 'n': //timespan //Athena doesn't support TIMENANO
                             //just map to VARCHAR for now
                             schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.timespan_type));
                             break;
