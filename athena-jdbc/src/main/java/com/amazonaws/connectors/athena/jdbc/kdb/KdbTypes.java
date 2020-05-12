@@ -31,6 +31,7 @@ public enum KdbTypes
     float_type,
     date_type,
     time_type,
+    timespan_type,
     timestamp_type,
     guid_type,
     symbol_type,

@@ -107,7 +107,7 @@ public class KdbMetadataHandler
             throws SQLException
     {
         ImmutableSet.Builder<String> schemaNames = ImmutableSet.builder();
-        schemaNames.add(DEFAULT_SCHEMA_NAME);
+        schemaNames.add(DEFAULT_SCHEMA_NAME); //kdb+ doesn't have schemas so returns default database.
         return schemaNames.build();
     }
 
@@ -116,26 +116,17 @@ public class KdbMetadataHandler
             throws SQLException
     {
         try (Statement stmt = jdbcConnection.createStatement()) {
-// /            final String SCHEMA_QUERY = "q) flip ( `TABLE_NAME`dummy ! ( tables[]; tables[] ) )";
             final String SCHEMA_QUERY = "q) flip ( `TABLE_NAME`TABLE_SCHEM ! ( tables[]; (count(tables[]))#(enlist \"" + DEFAULT_SCHEMA_NAME + "\") ) )";
             try (ResultSet resultSet = stmt.executeQuery(SCHEMA_QUERY)) {
                 ImmutableList.Builder<TableName> list = ImmutableList.builder();
                 while (resultSet.next()) {
+                    LOGGER.info(String.format("list table:%s %s", resultSet.getObject("TABLE_SCHEM"), resultSet.getObject("TABLE_NAME")));
                     list.add(getSchemaTableName(resultSet));
                 }
                 return list.build();
             }
         }
     }
-
-    // @Override
-    // protected TableName getSchemaTableName(final ResultSet resultSet)
-    //         throws SQLException
-    // {
-    //     return new TableName(
-    //             DEFAULT_SCHEMA_NAME,
-    //             resultSet.getString("TABLE_NAME"));
-    // }
 
     @Override
     protected Schema getSchema(Connection jdbcConnection, TableName tableName, Schema partitionSchema)
@@ -202,12 +193,17 @@ public class KdbMetadataHandler
                             schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.guid_type));
                             break;
                         case 'p': //timestamp
-                            //works only for mills.
+                            //Athena doesn't support DATENANO so map to VARCHAR for now
                             schemaBuilder.addField(newField(colname, Types.MinorType.DATEMILLI, KdbTypes.timestamp_type));
                             break;
-                        // case 't': //time //Athena doesn't support TIMESEC, TIMEMICRO, TIMENANO
-                            // schemaBuilder.addField(newField(colname, Types.MinorType.TIMENANO, KdbTypes.time_type));
-                        //     break;
+                        case 't': //time //Athena doesn't support TIMESEC
+                            //just map to VARCHAR for now
+                            schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.time_type));
+                            break;
+                        case 'n': //time //Athena doesn't support TIMENANO
+                            //just map to VARCHAR for now
+                            schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.timespan_type));
+                            break;
                         case 'd':
                             schemaBuilder.addField(newField(colname, Types.MinorType.DATEDAY, KdbTypes.date_type));
                             break;

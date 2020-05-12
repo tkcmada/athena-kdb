@@ -289,33 +289,31 @@ public class KdbQueryStringBuilder
                     return DATE_FORMAT.get().print(timestamp) + "D" + TIME_FORMAT.get().print(timestamp);
                 }
             case VARCHAR:
-                if (kdbtype == KdbTypes.guid_type) { //guid
-                    if (value == null) {
-                        return "0Ng";
-                    }
-                    else {
-                        return "\"G\"$\"" + value + "\"";
-                    }
-                }
-                else if (kdbtype == KdbTypes.char_type) { //char
-                    if (value == null) {
-                        return "\" \"";
-                    }
-                    else {
-                        return "\"" + value.toString() + "\"";
-                    }
-                }
-                else if (kdbtype == KdbTypes.list_of_char_type) {
-                    throw new UnsupportedOperationException("list of char type cannot be pushed down to where statement");
-                }
-                else {
-                    //symbol
-                    if (value == null) {
-                        return "` ";
-                    }
-                    else {
-                        return "`" + String.valueOf(value);
-                    }                        
+                switch(kdbtype) {
+                    case guid_type:
+                        if (value == null) {
+                            return "0Ng";
+                        }
+                        else {
+                            return "\"G\"$\"" + value + "\"";
+                        }
+                    case char_type:
+                        if (value == null) {
+                            return "\" \"";
+                        }
+                        else {
+                            return "\"" + value.toString() + "\"";
+                        }
+                    case list_of_char_type:
+                        throw new UnsupportedOperationException("list of char type cannot be pushed down to where statement");
+                    default:
+                        //symbol
+                        if (value == null) {
+                            return "` ";
+                        }
+                        else {
+                            return "`" + String.valueOf(value);
+                        }                        
                 }
             // case VARBINARY:
             //     return String.valueOf((byte[]) typeAndValue.getValue()); //or throw exception
