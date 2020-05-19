@@ -230,10 +230,10 @@ public class KdbRecordHandlerTest
     {
         LOGGER.info("newVarCharExtractor_list_of_int starting...");
         ResultSet rs = Mockito.mock(ResultSet.class);
-        Mockito.when(rs.getObject("str")).thenReturn(new int[] { 1, 2 });
+        Mockito.when(rs.getObject("str")).thenReturn(new int[] { 1, Integer.MIN_VALUE, 2 });
         NullableVarCharHolder dst = new NullableVarCharHolder();
         this.recordHandler.newVarcharExtractor(rs, "str", KdbMetadataHandler.newField("str", Types.MinorType.VARCHAR, KdbTypes.list_of_int_type)).extract(null, dst);
-        Assert.assertEquals("1 2", dst.value);
+        Assert.assertEquals("1 0Ni 2", dst.value);
     }
 
     @Test
@@ -241,10 +241,10 @@ public class KdbRecordHandlerTest
     {
         LOGGER.info("newVarCharExtractor_list_of_long starting...");
         ResultSet rs = Mockito.mock(ResultSet.class);
-        Mockito.when(rs.getObject("str")).thenReturn(new long[] { 1L, 2L });
+        Mockito.when(rs.getObject("str")).thenReturn(new long[] { 1L, Long.MIN_VALUE, 2L });
         NullableVarCharHolder dst = new NullableVarCharHolder();
         this.recordHandler.newVarcharExtractor(rs, "str", KdbMetadataHandler.newField("str", Types.MinorType.VARCHAR, KdbTypes.list_of_long_type)).extract(null, dst);
-        Assert.assertEquals("1 2", dst.value);
+        Assert.assertEquals("1 0Nj 2", dst.value);
     }
 
     @Test

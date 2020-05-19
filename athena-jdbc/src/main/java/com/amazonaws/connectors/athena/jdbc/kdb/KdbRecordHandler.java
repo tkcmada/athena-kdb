@@ -230,7 +230,11 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
         {
             if (i > 0)
                 sb.append(" ");
-            sb.append(a[i]);
+            if (a[i] == Integer.MIN_VALUE) {
+                sb.append("0Ni"); //null value
+            } else {
+                sb.append(a[i]);
+            }
         }
         return sb.toString();
     }
@@ -244,7 +248,11 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
         {
             if (i > 0)
                 sb.append(" ");
-            sb.append(a[i]);
+            if (a[i] == Long.MIN_VALUE) {
+                sb.append("0Nj"); //null value
+            } else {
+                sb.append(a[i]);
+            }
         }
         return sb.toString();
     }
