@@ -183,7 +183,6 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
                 switch(kdbtypechar) {
                     case 'n': //timespan
                         final String timespanstr = value.toString() + "000000000";
-                        //00:00:00.123456789
                         dst.value = timespanstr.substring(0, 18);
                         break;
                     case 'p': //timestamp
