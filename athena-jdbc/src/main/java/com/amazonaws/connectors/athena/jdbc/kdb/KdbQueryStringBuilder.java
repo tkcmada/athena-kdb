@@ -388,9 +388,24 @@ public class KdbQueryStringBuilder
             if (partitionSplit.containsKey(column.getName())) {
                 continue; // Ignore constraints on partition name as RDBMS does not contain these as columns. Presto will filter these values.
             }
-            if (KdbTypes.list_of_char_type.name().equals(column.getFieldType().getMetadata().get(KdbMetadataHandler.KDBTYPE_KEY))) {
-                LOGGER.info("list of char column is excluded from where caluse. columnName=" + column.getName());
-                continue;
+            final char kdbtype = KdbMetadataHandler.getKdbTypeChar(column);
+            switch(kdbtype) {
+                case 'C': //list of char
+                case 'P': //list of timestamp
+                case 'S': //list of symbol
+                case 'X': //list of byte
+                case 'H': //list of short
+                case 'I': //list of int
+                case 'J': //list of long
+                case 'E': //list of real
+                case 'F': //list of float
+                case 'B': //list of bit
+                case 'G': //list of guid
+                case 'D': //list of date
+                    LOGGER.info("list column is excluded from where caluse. columnName=" + column.getName());
+                    continue;
+                default:
+                    //no default logic
             }
             ArrowType type = column.getType();
             if (constraints.getSummary() != null && !constraints.getSummary().isEmpty()) {

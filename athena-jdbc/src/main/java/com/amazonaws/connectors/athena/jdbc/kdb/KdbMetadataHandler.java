@@ -293,7 +293,7 @@ public class KdbMetadataHandler
     public Schema getPartitionSchema(final String catalogName)
     {
         SchemaBuilder schemaBuilder = SchemaBuilder.newBuilder()
-                .addField(BLOCK_PARTITION_COLUMN_NAME, Types.MinorType.VARCHAR.getType());
+                .addField(newField(BLOCK_PARTITION_COLUMN_NAME, Types.MinorType.VARCHAR, KdbTypes.list_of_char_type));
         return schemaBuilder.build();
     }
 
