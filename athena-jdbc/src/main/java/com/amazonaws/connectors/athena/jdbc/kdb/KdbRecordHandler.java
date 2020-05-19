@@ -290,7 +290,11 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
         {
             if (i > 0)
                 sb.append(" ");
-            sb.append(KdbQueryStringBuilder.toLiteral(timestamps[i], Types.MinorType.VARCHAR, KdbTypes.timestamp_type));
+            if (timestamps[i].getTime() == Long.MIN_VALUE) {
+                sb.append("0Np");
+            } else {
+                sb.append(KdbQueryStringBuilder.toLiteral(timestamps[i], Types.MinorType.VARCHAR, KdbTypes.timestamp_type));
+            }
         }
         return sb.toString();
     }

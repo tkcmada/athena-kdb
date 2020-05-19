@@ -211,7 +211,7 @@ public class KdbRecordHandlerTest
         LOGGER.info("newVarCharExtractor_list_of_timestamp starting...");
         Timestamp[] a = new Timestamp[] {
             new Timestamp(2020 - 1900, 0, 2, 3, 4, 5, 1000000),
-            null,
+            new Timestamp(Long.MIN_VALUE), //null value
             new Timestamp(2020 - 1900, 0, 2, 3, 4, 5, 1000000)
         };
         Assert.assertEquals("2020.01.02D03:04:05.001000000 0Np 2020.01.02D03:04:05.001000000", KdbRecordHandler.toVarChar(a));
