@@ -208,6 +208,24 @@ public class KdbMetadataHandler
                         case 'd':
                             schemaBuilder.addField(newField(colname, Types.MinorType.DATEDAY, KdbTypes.date_type));
                             break;
+                        case 'J':
+                            schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.list_of_long_type));
+                            break;
+                        case 'I':
+                            schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.list_of_int_type));
+                            break;
+                        case 'X':
+                            schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.list_of_byte_type));
+                            break;
+                        case 'F':
+                            schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.list_of_float_type));
+                            break;
+                        case 'S':
+                            schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.list_of_byte_type));
+                            break;
+                        case 'P':
+                            schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.list_of_timestamp_type));
+                            break;
                         default:
                             LOGGER.error("getSchema: Unable to map type for column[" + colname + "] to a supported type, attempted '" + coltype + "'");
                     }

@@ -48,6 +48,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.arrow.vector.types.Types;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
+import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +58,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.stream.Stream;
 
 /**
  * Data handler, user must have necessary permissions to read from necessary tables.
@@ -70,6 +73,8 @@ public class KdbRecordHandler
     private static final String MYSQL_QUOTE_CHARACTER = "`";
 
     private final JdbcSplitQueryBuilder jdbcSplitQueryBuilder;
+
+    private static final int STRING_BUFFER_INITIAL_CAPACITY = 5000;
 
     /**
      * Instantiates handler to be used by Lambda function directly.
@@ -185,11 +190,113 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
                         final Timestamp timestamp = (Timestamp)value;
                         dst.value = KdbQueryStringBuilder.toLiteral(timestamp, Types.MinorType.VARCHAR, KdbTypes.timestamp_type);
                         break;
+                    case 'S': //list of symbol
+                        final String[] symbols = (String[]) value;
+                        dst.value = toVarChar(symbols);
+                        break;
+                    case 'P': //list of timestamp
+                        final Timestamp[] timestamps = (Timestamp[]) value;
+                        dst.value = toVarChar(timestamps);
+                        break;
+                    case 'X': //list of byte
+                        final byte[] bytes = (byte[]) value;
+                        dst.value = toVarChar(bytes);
+                        break;
+                    case 'I': //list of int
+                        final int[] ints = (int[]) value;
+                        dst.value = toVarChar(ints);
+                        break;
+                    case 'J': //list of long
+                        final long[] longs = (long[]) value;
+                        dst.value = toVarChar(longs);
+                        break;
+                    case 'F': //list of float
+                        final double[] doubles = (double[]) value;
+                        dst.value = toVarChar(doubles);
+                        break;
                     default:
                         dst.value = value.toString();
                 }
             }
             dst.isSet = resultSet.wasNull() ? 0 : 1;
         };
+    }
+
+    @VisibleForTesting
+    static String toVarChar(int[] a)
+    {
+        //StringBuilder with pre allocated is faster than Stream.
+        StringBuilder sb = new StringBuilder(STRING_BUFFER_INITIAL_CAPACITY);
+        for (int i = 0; i < a.length; i++)
+        {
+            if (i > 0)
+                sb.append(" ");
+            sb.append(a[i]);
+        }
+        return sb.toString();
+    }
+
+    @VisibleForTesting
+    static String toVarChar(long[] a)
+    {
+        //StringBuilder with pre allocated is faster than Stream.
+        StringBuilder sb = new StringBuilder(STRING_BUFFER_INITIAL_CAPACITY);
+        for (int i = 0; i < a.length; i++)
+        {
+            if (i > 0)
+                sb.append(" ");
+            sb.append(a[i]);
+        }
+        return sb.toString();
+    }
+
+    @VisibleForTesting
+    static String toVarChar(double[] a)
+    {
+        //StringBuilder with pre allocated is faster than Stream.
+        StringBuilder sb = new StringBuilder(STRING_BUFFER_INITIAL_CAPACITY);
+        for (int i = 0; i < a.length; i++)
+        {
+            if (i > 0)
+                sb.append(" ");
+            sb.append(a[i]);
+        }
+        return sb.toString();
+    }
+
+    @VisibleForTesting
+    static String toVarChar(byte[] a)
+    {
+        final char[] chars = Hex.encodeHex(a);
+        StringBuilder s = new StringBuilder(chars.length + 2);
+        s.append("0x");
+        s.append(chars);
+        return s.toString();
+    }
+
+    @VisibleForTesting
+    static String toVarChar(Timestamp[] timestamps)
+    {
+        //StringBuilder with pre allocated is faster than Stream.
+        StringBuilder sb = new StringBuilder(STRING_BUFFER_INITIAL_CAPACITY);
+        for (int i = 0; i < timestamps.length; i++)
+        {
+            if (i > 0)
+                sb.append(" ");
+            sb.append(KdbQueryStringBuilder.toLiteral(timestamps[i], Types.MinorType.VARCHAR, KdbTypes.timestamp_type));
+        }
+        return sb.toString();
+    }
+
+    @VisibleForTesting
+    static String toVarChar(String[] symbols)
+    {
+        //StringBuilder with pre allocated is faster than Stream.
+        StringBuilder sb = new StringBuilder(STRING_BUFFER_INITIAL_CAPACITY);
+        for (int i = 0; i < symbols.length; i++)
+        {
+            sb.append(KdbQueryStringBuilder.toLiteral(symbols[i], Types.MinorType.VARCHAR, KdbTypes.symbol_type));
+        }
+        return sb.toString();
     }
 }

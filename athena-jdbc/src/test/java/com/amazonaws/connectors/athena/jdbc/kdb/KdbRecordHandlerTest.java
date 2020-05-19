@@ -206,6 +206,70 @@ public class KdbRecordHandlerTest
     }
 
     @Test
+    public void newVarCharExtractor_list_of_timestamp() throws Exception
+    {
+        LOGGER.info("newVarCharExtractor_list_of_timestamp starting...");
+        Timestamp[] a = new Timestamp[] {
+            new Timestamp(2020 - 1900, 0, 2, 3, 4, 5, 1000000),
+            null,
+            new Timestamp(2020 - 1900, 0, 2, 3, 4, 5, 1000000)
+        };
+        Assert.assertEquals("2020.01.02D03:04:05.001000000 0Np 2020.01.02D03:04:05.001000000", KdbRecordHandler.toVarChar(a));
+    }
+
+    @Test
+    public void newVarCharExtractor_list_of_symbol() throws Exception
+    {
+        LOGGER.info("newVarCharExtractor_list_of_timestamp starting...");
+        String[] a = new String[] { "abc", "", "def" };
+        Assert.assertEquals("`abc``def", KdbRecordHandler.toVarChar(a));
+    }
+
+    @Test
+    public void newVarCharExtractor_list_of_int() throws Exception
+    {
+        LOGGER.info("newVarCharExtractor_list_of_int starting...");
+        ResultSet rs = Mockito.mock(ResultSet.class);
+        Mockito.when(rs.getObject("str")).thenReturn(new int[] { 1, 2 });
+        NullableVarCharHolder dst = new NullableVarCharHolder();
+        this.recordHandler.newVarcharExtractor(rs, "str", KdbMetadataHandler.newField("str", Types.MinorType.VARCHAR, KdbTypes.list_of_int_type)).extract(null, dst);
+        Assert.assertEquals("1 2", dst.value);
+    }
+
+    @Test
+    public void newVarCharExtractor_list_of_long() throws Exception
+    {
+        LOGGER.info("newVarCharExtractor_list_of_long starting...");
+        ResultSet rs = Mockito.mock(ResultSet.class);
+        Mockito.when(rs.getObject("str")).thenReturn(new long[] { 1L, 2L });
+        NullableVarCharHolder dst = new NullableVarCharHolder();
+        this.recordHandler.newVarcharExtractor(rs, "str", KdbMetadataHandler.newField("str", Types.MinorType.VARCHAR, KdbTypes.list_of_long_type)).extract(null, dst);
+        Assert.assertEquals("1 2", dst.value);
+    }
+
+    @Test
+    public void newVarCharExtractor_list_of_float() throws Exception
+    {
+        LOGGER.info("newVarCharExtractor_list_of_float starting...");
+        ResultSet rs = Mockito.mock(ResultSet.class);
+        Mockito.when(rs.getObject("str")).thenReturn(new double[] { 1.0, 1.1 });
+        NullableVarCharHolder dst = new NullableVarCharHolder();
+        this.recordHandler.newVarcharExtractor(rs, "str", KdbMetadataHandler.newField("str", Types.MinorType.VARCHAR, KdbTypes.list_of_float_type)).extract(null, dst);
+        Assert.assertEquals("1.0 1.1", dst.value);
+    }
+
+    @Test
+    public void newVarCharExtractor_list_of_byte() throws Exception
+    {
+        LOGGER.info("newVarCharExtractor_list_of_byte starting...");
+        ResultSet rs = Mockito.mock(ResultSet.class);
+        Mockito.when(rs.getObject("str")).thenReturn(new byte[] { 0x00, 0x01 });
+        NullableVarCharHolder dst = new NullableVarCharHolder();
+        this.recordHandler.newVarcharExtractor(rs, "str", KdbMetadataHandler.newField("str", Types.MinorType.VARCHAR, KdbTypes.list_of_byte_type)).extract(null, dst);
+        Assert.assertEquals("0x0001", dst.value);
+    }
+
+    @Test
     public void buildSplitSql()
             throws SQLException
     {
