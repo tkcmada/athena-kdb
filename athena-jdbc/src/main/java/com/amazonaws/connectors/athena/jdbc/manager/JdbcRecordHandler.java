@@ -149,8 +149,7 @@ public abstract class JdbcRecordHandler
                     if (!queryStatusChecker.isQueryRunning()) {
                         return;
                     }
-                    final int rowidx = rowsReturnedFromDatabase;
-                    blockSpiller.writeRows((Block block, int rowNum) -> rowWriter.writeRow(block, rowidx, resultSet) ? 1 : 0);
+                    blockSpiller.writeRows((Block block, int rowNum) -> rowWriter.writeRow(block, rowNum, resultSet) ? 1 : 0);
                     rowsReturnedFromDatabase++;
                 }
                 LOGGER.info("{} rows returned by database.", rowsReturnedFromDatabase);

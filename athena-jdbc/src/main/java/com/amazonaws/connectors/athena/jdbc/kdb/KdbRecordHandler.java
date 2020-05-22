@@ -214,7 +214,7 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
                                     //writeList
                                     writer.startList();
                                     for(int i = 0; i < doubles.length; i++) {
-                                        writer.float8().writeFloat8(doubles[i]);
+                                        writer.float8().writeFloat8(doubles[i]); //TODO should check constraints
                                     }
                                     writer.endList();
                                     //end of writeList
@@ -224,7 +224,7 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
                                     throw new IllegalArgumentException("unsupported kdbtypechar " + kdbtypechar);
                             }
                         }
-                        return false; //means that constraints is not considered
+                        return true;
                 };
                 return fieldwriter;
             };
