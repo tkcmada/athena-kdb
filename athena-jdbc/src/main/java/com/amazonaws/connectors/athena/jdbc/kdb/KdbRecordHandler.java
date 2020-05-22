@@ -19,10 +19,8 @@
  */
 package com.amazonaws.connectors.athena.jdbc.kdb;
 
-import com.amazonaws.athena.connector.lambda.QueryStatusChecker;
-import com.amazonaws.athena.connector.lambda.data.Block;
-import com.amazonaws.athena.connector.lambda.data.BlockSpiller;
-import com.amazonaws.athena.connector.lambda.data.writers.GeneratedRowWriter;
+import com.amazonaws.athena.connector.lambda.data.BlockUtils;
+import com.amazonaws.athena.connector.lambda.data.FieldResolver;
 import com.amazonaws.athena.connector.lambda.data.writers.extractors.Extractor;
 import com.amazonaws.athena.connector.lambda.data.writers.extractors.Float8Extractor;
 import com.amazonaws.athena.connector.lambda.data.writers.extractors.VarCharExtractor;
@@ -33,7 +31,6 @@ import com.amazonaws.athena.connector.lambda.domain.Split;
 import com.amazonaws.athena.connector.lambda.domain.TableName;
 import com.amazonaws.athena.connector.lambda.domain.predicate.ConstraintProjector;
 import com.amazonaws.athena.connector.lambda.domain.predicate.Constraints;
-import com.amazonaws.athena.connector.lambda.records.ReadRecordsRequest;
 import com.amazonaws.connectors.athena.jdbc.connection.DatabaseConnectionConfig;
 import com.amazonaws.connectors.athena.jdbc.connection.GenericJdbcConnectionFactory;
 import com.amazonaws.connectors.athena.jdbc.connection.JdbcConnectionFactory;
@@ -47,6 +44,8 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.secretsmanager.AWSSecretsManager;
 import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.complex.ListVector;
@@ -66,6 +65,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -202,23 +203,26 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
             final FieldWriterFactory factory = (FieldVector vector, Extractor extractor, ConstraintProjector constraint) -> {
                 final FieldWriter fieldwriter = (Object context, int rowNum) -> {
                         final Object value = resultSet.getObject(fieldName);
-                        UnionListWriter writer = ((ListVector) vector).getWriter();
-                        switch(kdbtypechar) {
-                            case 'F': //list of float
-                                final double[] doubles = (double[]) value;
-                                writer.setPosition(rowNum);
-                                writer.startList();
-                                final ListWriter listwriter = writer.list();
-                                listwriter.startList();
-                                for(int i = 0; i < doubles.length; i++) {
-                                    listwriter.float8().writeFloat8(doubles[i]);
-                                }
-                                listwriter.endList();
-                                writer.endList();
-                                ((ListVector) vector).setNotNull(rowNum);
-                                break;
-                            default:
-                                throw new IllegalArgumentException("unsupported kdbtypechar " + kdbtypechar);
+                        if (value != null) {
+                            switch(kdbtypechar) {
+                                case 'F': //list of float
+                                    final double[] doubles = (double[]) value;
+                                    LOGGER.info(String.format("ver1.1 list of float at %s : %s ", rowNum, Arrays.toString(doubles)));
+
+                                    UnionListWriter writer = ((ListVector) vector).getWriter();
+                                    writer.setPosition(rowNum);
+                                    //writeList
+                                    writer.startList();
+                                    for(int i = 0; i < doubles.length; i++) {
+                                        writer.float8().writeFloat8(doubles[i]);
+                                    }
+                                    writer.endList();
+                                    //end of writeList
+                                    ((ListVector) vector).setNotNull(rowNum);
+                                    break;
+                                default:
+                                    throw new IllegalArgumentException("unsupported kdbtypechar " + kdbtypechar);
+                            }
                         }
                         return false; //means that constraints is not considered
                 };
