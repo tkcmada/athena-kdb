@@ -26,10 +26,12 @@ import com.amazonaws.athena.connector.lambda.data.writers.GeneratedRowWriter;
 import com.amazonaws.athena.connector.lambda.data.writers.extractors.Extractor;
 import com.amazonaws.athena.connector.lambda.data.writers.extractors.Float8Extractor;
 import com.amazonaws.athena.connector.lambda.data.writers.extractors.VarCharExtractor;
+import com.amazonaws.athena.connector.lambda.data.writers.fieldwriters.FieldWriter;
 import com.amazonaws.athena.connector.lambda.data.writers.fieldwriters.FieldWriterFactory;
 import com.amazonaws.athena.connector.lambda.data.writers.holders.NullableVarCharHolder;
 import com.amazonaws.athena.connector.lambda.domain.Split;
 import com.amazonaws.athena.connector.lambda.domain.TableName;
+import com.amazonaws.athena.connector.lambda.domain.predicate.ConstraintProjector;
 import com.amazonaws.athena.connector.lambda.domain.predicate.Constraints;
 import com.amazonaws.athena.connector.lambda.records.ReadRecordsRequest;
 import com.amazonaws.connectors.athena.jdbc.connection.DatabaseConnectionConfig;
@@ -46,6 +48,8 @@ import com.amazonaws.services.secretsmanager.AWSSecretsManager;
 import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder;
 import com.google.common.annotations.VisibleForTesting;
 
+import org.apache.arrow.vector.FieldVector;
+import org.apache.arrow.vector.complex.ListVector;
 import org.apache.arrow.vector.complex.impl.UnionListWriter;
 import org.apache.arrow.vector.types.Types;
 import org.apache.arrow.vector.types.Types.MinorType;
@@ -223,26 +227,25 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
     }
 
     @Override
-    protected FieldWriterFactory makeFactory(final Field field, ResultSet resultSet, Map<String, String> partitionValues) {
+    protected FieldWriterFactory makeFactory(Field field, ResultSet resultSet, Map<String, String> partitionValues)
     {
         final String fieldName = field.getName();
         final Types.MinorType fieldType = Types.getMinorTypeForArrowType(field.getType());
         final char kdbtypechar = KdbMetadataHandler.getKdbTypeChar(field);
+
         if (fieldType == MinorType.LIST)
         {
-            return (FieldVector vector, Extractor extractor, ConstraintProjector constraint) ->
-                    (FieldWriter) (Object context, int rowNum) -> {
+            final FieldWriterFactory factory = (FieldVector vector, Extractor extractor, ConstraintProjector constraint) -> {
+                final FieldWriter fieldwriter = (Object context, int rowNum) -> {
                         final Object value = resultSet.getObject(fieldName);
                         UnionListWriter writer = ((ListVector) vector).getWriter();
-                        int rowNum = 0;
                         switch(kdbtypechar) {
                             case 'F': //list of float
                                 final double[] doubles = (double[]) value;
-                                rowNum = doubles.length;
                                 writer.setPosition(rowNum);
                                 writer.startList();
                                 for(int i = 0; i < doubles.length; i++) {
-                                    writer.float8().writeFloat8(value);
+                                    writer.float8().writeFloat8(doubles[i]);
                                 }
                                 break;
                             default:
@@ -250,9 +253,18 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
                         }
                         writer.endList();
                         ((ListVector) vector).setNotNull(rowNum);
-                    };
+                        return false; //means that constraints is not considered
+                };
+                return fieldwriter;
+            };
+            return factory;
+        }
+        else
+        {
+            throw new IllegalArgumentException("unsupported fieldType " + fieldType + " field name " + fieldName);
         }
     }
+
 
     @VisibleForTesting
     static String toVarChar(int[] a)
