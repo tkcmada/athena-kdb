@@ -141,7 +141,6 @@ public abstract class JdbcRecordHandler
                         //LIST and STRUCT come here
                         rowWriterBuilder.withFieldWriterFactory(next.getName(), makeFactory(next, resultSet, partitionValues));
                     }
-
                 }
 
                 GeneratedRowWriter rowWriter = rowWriterBuilder.build();

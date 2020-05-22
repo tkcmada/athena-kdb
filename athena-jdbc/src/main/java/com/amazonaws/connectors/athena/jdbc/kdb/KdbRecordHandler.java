@@ -121,43 +121,6 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
     }
 
     @Override
-    public void readWithConstraint(BlockSpiller blockSpiller, ReadRecordsRequest readRecordsRequest, QueryStatusChecker queryStatusChecker)
-    {
-        LOGGER.info("{}: Catalog: {}, table {}, splits {}", readRecordsRequest.getQueryId(), readRecordsRequest.getCatalogName(), readRecordsRequest.getTableName(),
-                readRecordsRequest.getSplit().getProperties());
-        try (Connection connection = jdbcConnectionFactory.getConnection(getCredentialProvider())) {
-            connection.setAutoCommit(false); // For consistency. This is needed to be false to enable streaming for some database types.
-            try (PreparedStatement preparedStatement = buildSplitSql(connection, readRecordsRequest.getCatalogName(), readRecordsRequest.getTableName(),
-                    readRecordsRequest.getSchema(), readRecordsRequest.getConstraints(), readRecordsRequest.getSplit());
-                    ResultSet resultSet = preparedStatement.executeQuery()) {
-                Map<String, String> partitionValues = readRecordsRequest.getSplit().getProperties();
-
-                GeneratedRowWriter.RowWriterBuilder rowWriterBuilder = GeneratedRowWriter.newBuilder(readRecordsRequest.getConstraints());
-                for (Field next : readRecordsRequest.getSchema().getFields()) {
-                    Extractor extractor = makeExtractor(next, resultSet, partitionValues);
-                    rowWriterBuilder.withExtractor(next.getName(), extractor);
-                }
-
-                GeneratedRowWriter rowWriter = rowWriterBuilder.build();
-                int rowsReturnedFromDatabase = 0;
-                while (resultSet.next()) {
-                    if (!queryStatusChecker.isQueryRunning()) {
-                        return;
-                    }
-                    blockSpiller.writeRows((Block block, int rowNum) -> rowWriter.writeRow(block, rowNum, resultSet) ? 1 : 0);
-                    rowsReturnedFromDatabase++;
-                }
-                LOGGER.info("{} rows returned by database.", rowsReturnedFromDatabase);
-
-                connection.commit();
-            }
-        }
-        catch (SQLException sqlException) {
-            throw new RuntimeException(sqlException.getErrorCode() + ": " + sqlException.getMessage(), sqlException);
-        }
-    }
-
-    @Override
     protected Float8Extractor newFloat8Extractor(final ResultSet resultSet, final String fieldName, final Field field)
     {
         return (Float8Extractor) (Object context, org.apache.arrow.vector.holders.NullableFloat8Holder dst) ->
