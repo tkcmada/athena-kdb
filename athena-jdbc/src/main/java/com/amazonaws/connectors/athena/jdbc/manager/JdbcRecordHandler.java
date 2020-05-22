@@ -36,6 +36,7 @@ import com.amazonaws.athena.connector.lambda.data.writers.extractors.SmallIntExt
 import com.amazonaws.athena.connector.lambda.data.writers.extractors.TinyIntExtractor;
 import com.amazonaws.athena.connector.lambda.data.writers.extractors.VarBinaryExtractor;
 import com.amazonaws.athena.connector.lambda.data.writers.extractors.VarCharExtractor;
+import com.amazonaws.athena.connector.lambda.data.writers.fieldwriters.FieldWriterFactory;
 import com.amazonaws.athena.connector.lambda.data.writers.holders.NullableDecimalHolder;
 import com.amazonaws.athena.connector.lambda.data.writers.holders.NullableVarBinaryHolder;
 import com.amazonaws.athena.connector.lambda.data.writers.holders.NullableVarCharHolder;
@@ -133,7 +134,14 @@ public abstract class JdbcRecordHandler
                 GeneratedRowWriter.RowWriterBuilder rowWriterBuilder = GeneratedRowWriter.newBuilder(readRecordsRequest.getConstraints());
                 for (Field next : readRecordsRequest.getSchema().getFields()) {
                     Extractor extractor = makeExtractor(next, resultSet, partitionValues);
-                    rowWriterBuilder.withExtractor(next.getName(), extractor);
+                    if (extractor != null) {
+                        rowWriterBuilder.withExtractor(next.getName(), extractor);
+                    }
+                    else {
+                        //LIST and STRUCT come here
+                        rowWriterBuilder.withFieldWriterFactory(next.getName(), makeFactory(next, resultSet, partitionValues));
+                    }
+
                 }
 
                 GeneratedRowWriter rowWriter = rowWriterBuilder.build();
@@ -249,9 +257,25 @@ public abstract class JdbcRecordHandler
                     dst.value = resultSet.getBytes(fieldName);
                     dst.isSet = resultSet.wasNull() ? 0 : 1;
                 };
+            case LIST:
+                return null; //this indicates that makeFactory will be called.
+            case STRUCT:
+                return null; //this indicates that makeFactory will be called.
             default:
                 throw new RuntimeException("Unhandled type " + fieldType);
         }
+    }
+
+    /**
+     * Since GeneratedRowWriter doesn't yet support complex types (STRUCT, LIST) we use this to
+     * create our own FieldWriters via customer FieldWriterFactory. In this case we are producing
+     * FieldWriters that only work for our exact example schema. This will be enhanced with a more
+     * generic solution in a future release.
+     */
+    protected FieldWriterFactory makeFactory(Field field, ResultSet resultSet, Map<String, String> partitionValues) {
+        final Types.MinorType fieldType = Types.getMinorTypeForArrowType(field.getType());
+        final String fieldName = field.getName();
+        throw new RuntimeException("Unhandled type " + String.valueOf(fieldType) + " field name " + String.valueOf(fieldName));
     }
 
     protected Float8Extractor newFloat8Extractor(final ResultSet resultSet, final String fieldName, final Field field)
@@ -265,6 +289,18 @@ public abstract class JdbcRecordHandler
     }
 
     protected VarCharExtractor newVarcharExtractor(final ResultSet resultSet, final String fieldName, final Field field)
+    {
+        return (VarCharExtractor) (Object context, NullableVarCharHolder dst) ->
+        {
+            Object value = resultSet.getString(fieldName);
+            if(value != null) {
+                dst.value = value.toString();
+            }
+            dst.isSet = resultSet.wasNull() ? 0 : 1;
+        };
+    }
+
+    protected VarCharExtractor newListExtractor(final ResultSet resultSet, final String fieldName, final Field field)
     {
         return (VarCharExtractor) (Object context, NullableVarCharHolder dst) ->
         {

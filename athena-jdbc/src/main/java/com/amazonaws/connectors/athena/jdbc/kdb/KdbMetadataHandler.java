@@ -43,6 +43,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.arrow.vector.complex.reader.FieldReader;
 import org.apache.arrow.vector.types.Types;
+import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.FieldType;
 import org.apache.arrow.vector.types.pojo.Schema;
@@ -77,6 +78,11 @@ public class KdbMetadataHandler
     public static final String KDBTYPE_KEY = "kdbtype";
     public static final String KDBTYPECHAR_KEY = "kdbtypechar";
     public static final String DEFAULT_SCHEMA_NAME = "schema1";
+
+    private static boolean isListMappedToArray = true;
+
+    public static boolean isListMappedToArray() { return isListMappedToArray; }
+    public static void setListMappedToArray(boolean value) { isListMappedToArray = value; }
     
     /**
      * Instantiates handler to be used by Lambda function directly.
@@ -218,7 +224,14 @@ public class KdbMetadataHandler
                             schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.list_of_byte_type));
                             break;
                         case 'F':
-                            schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.list_of_float_type));
+                            if (isListMappedToArray())
+                            {
+                                schemaBuilder.addField(newListField(colname, KdbTypes.list_of_float_type, Types.MinorType.FLOAT8, KdbTypes.float_type));
+                            }
+                            else
+                            {
+                                schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.list_of_float_type));
+                            }
                             break;
                         case 'S':
                             schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.list_of_symbol_type));
@@ -395,6 +408,23 @@ public class KdbMetadataHandler
             .build();
         FieldType fieldType = new FieldType(true, minorType.getType(), null, metadata);
         return new Field(colname, fieldType, null);
+    }
+
+    @VisibleForTesting
+    static Field newListField(String colname, KdbTypes listkdbtype, Types.MinorType primitive_minorType, KdbTypes primitive_kdbtype)
+    {
+        final Map<String, String> metadata = ImmutableMap.<String, String>builder()
+            .put(KDBTYPE_KEY    , listkdbtype == null ? "null" : listkdbtype.name())
+            .put(KDBTYPECHAR_KEY, listkdbtype == null ? " " : String.valueOf(listkdbtype.kdbtype))
+            .build();
+            
+        FieldType fieldtype = new FieldType(false, new ArrowType.List(), null, metadata);
+
+        Field baseField = newField("", primitive_minorType, primitive_kdbtype);
+        Field listfield = new Field(colname,
+                fieldtype,
+                Collections.singletonList(baseField));
+        return listfield;
     }
 
     @VisibleForTesting

@@ -26,6 +26,7 @@ import com.amazonaws.athena.connector.lambda.data.writers.GeneratedRowWriter;
 import com.amazonaws.athena.connector.lambda.data.writers.extractors.Extractor;
 import com.amazonaws.athena.connector.lambda.data.writers.extractors.Float8Extractor;
 import com.amazonaws.athena.connector.lambda.data.writers.extractors.VarCharExtractor;
+import com.amazonaws.athena.connector.lambda.data.writers.fieldwriters.FieldWriterFactory;
 import com.amazonaws.athena.connector.lambda.data.writers.holders.NullableVarCharHolder;
 import com.amazonaws.athena.connector.lambda.domain.Split;
 import com.amazonaws.athena.connector.lambda.domain.TableName;
@@ -45,7 +46,9 @@ import com.amazonaws.services.secretsmanager.AWSSecretsManager;
 import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder;
 import com.google.common.annotations.VisibleForTesting;
 
+import org.apache.arrow.vector.complex.impl.UnionListWriter;
 import org.apache.arrow.vector.types.Types;
+import org.apache.arrow.vector.types.Types.MinorType;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.commons.codec.binary.Hex;
@@ -58,9 +61,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.util.Arrays;
 import java.util.Map;
-import java.util.stream.Stream;
 
 /**
  * Data handler, user must have necessary permissions to read from necessary tables.
@@ -219,6 +220,38 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
             }
             dst.isSet = resultSet.wasNull() ? 0 : 1;
         };
+    }
+
+    @Override
+    protected FieldWriterFactory makeFactory(final Field field, ResultSet resultSet, Map<String, String> partitionValues) {
+    {
+        final String fieldName = field.getName();
+        final Types.MinorType fieldType = Types.getMinorTypeForArrowType(field.getType());
+        final char kdbtypechar = KdbMetadataHandler.getKdbTypeChar(field);
+        if (fieldType == MinorType.LIST)
+        {
+            return (FieldVector vector, Extractor extractor, ConstraintProjector constraint) ->
+                    (FieldWriter) (Object context, int rowNum) -> {
+                        final Object value = resultSet.getObject(fieldName);
+                        UnionListWriter writer = ((ListVector) vector).getWriter();
+                        int rowNum = 0;
+                        switch(kdbtypechar) {
+                            case 'F': //list of float
+                                final double[] doubles = (double[]) value;
+                                rowNum = doubles.length;
+                                writer.setPosition(rowNum);
+                                writer.startList();
+                                for(int i = 0; i < doubles.length; i++) {
+                                    writer.float8().writeFloat8(value);
+                                }
+                                break;
+                            default:
+                                throw new IllegalArgumentException("unsupported kdbtypechar " + kdbtypechar);
+                        }
+                        writer.endList();
+                        ((ListVector) vector).setNotNull(rowNum);
+                    };
+        }
     }
 
     @VisibleForTesting
