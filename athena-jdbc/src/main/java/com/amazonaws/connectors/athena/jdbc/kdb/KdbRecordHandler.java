@@ -208,15 +208,18 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
                                 final double[] doubles = (double[]) value;
                                 writer.setPosition(rowNum);
                                 writer.startList();
+                                final ListWriter listwriter = writer.list();
+                                listwriter.startList();
                                 for(int i = 0; i < doubles.length; i++) {
-                                    writer.float8().writeFloat8(doubles[i]);
+                                    listwriter.float8().writeFloat8(doubles[i]);
                                 }
+                                listwriter.endList();
+                                writer.endList();
+                                ((ListVector) vector).setNotNull(rowNum);
                                 break;
                             default:
                                 throw new IllegalArgumentException("unsupported kdbtypechar " + kdbtypechar);
                         }
-                        writer.endList();
-                        ((ListVector) vector).setNotNull(rowNum);
                         return false; //means that constraints is not considered
                 };
                 return fieldwriter;
