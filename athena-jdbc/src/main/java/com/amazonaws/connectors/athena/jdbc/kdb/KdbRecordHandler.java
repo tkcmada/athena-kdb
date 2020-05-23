@@ -214,7 +214,14 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
                                     //writeList
                                     writer.startList();
                                     for(int i = 0; i < doubles.length; i++) {
-                                        writer.float8().writeFloat8(doubles[i]); //TODO should check constraints
+                                        final double val = doubles[i];
+                                        //TODO should check constraints
+                                        if(Double.isNaN(val)) {
+                                            writer.setPosition(writer.getPosition()+1);
+                                        }
+                                        else {
+                                            writer.writeFloat8(val);
+                                        }
                                     }
                                     writer.endList();
                                     //end of writeList
