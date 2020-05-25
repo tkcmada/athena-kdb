@@ -485,15 +485,19 @@ public class KdbQueryStringBuilder
                 disjuncts.add(toPredicate(columnName, column, "=", Iterables.getOnlyElement(singleValues), type, accumulator));
             }
             else if (singleValues.size() > 1) {
-                // for (Object value : singleValues) {
-                //     accumulator.add(new TypeAndValue(type, value));
-                // }
-                List<Object> literals = Lists.newArrayListWithCapacity(singleValues.size());
+                final StringBuilder insql = new StringBuilder();
+                insql.append("(");
+                int count = 0;
                 for (Object val : singleValues) {
-                    literals.add(toLiteral(val, type, columnName, column));
+                    if (count > 0)
+                        insql.append(" or ");
+                    insql.append(quote(columnName));
+                    insql.append(" = ");
+                    insql.append(toLiteral(val, type, columnName, column));
+                    count++;
                 }
-                String values = Joiner.on(",").join(literals);
-                disjuncts.add(quote(columnName) + " IN (" + values + ")");
+                insql.append(")");
+                disjuncts.add(insql.toString());
             }
         }
 

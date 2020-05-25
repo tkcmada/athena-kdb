@@ -170,7 +170,9 @@ public class KdbMetadataHandler
         SchemaBuilder schemaBuilder = SchemaBuilder.newBuilder();
         try (Statement stmt = jdbcConnection.createStatement()) {
             final String athenaTableName = tableName.getTableName();
+            LOGGER.info("Athena table name:" + athenaTableName);
             final String kdbTableName = athenaTableNameToKdbTableName(athenaTableName);
+            LOGGER.info("Kdb table name:" + kdbTableName);
             final String sql = "q) flip `COLUMN_NAME`COLUMN_TYPE!(cols " + kdbTableName + "; (value meta " + kdbTableName + ")[;`t] )";
             LOGGER.info("Generated SQL for meta:" + sql);
             try (ResultSet rs = stmt.executeQuery(sql)) {
