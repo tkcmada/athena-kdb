@@ -322,7 +322,7 @@ public class KdbRecordHandlerTest
                 .put("ts"       , valueSet_ts)
                 .build());
 
-        String expectedSql = "q) select testCol1, testCol2, testCol3, r, testCol5, testCol6, testCol7, testCol8, testCol9, z, g, str, c, t, ts from testTable PARTITION(p0)  where ((testCol1 = 1i or testCol1 = 2i)) , (testCol2 = `abc) , ((testCol3 > 2 , testCol3 <= 20)) , (r = 1.5e) , (testCol5 = 1i) , (testCol6 = 0i) , (testCol7 = 1.2) , (testCol8 = 1b) , (testCol9 = 2020.01.01) , (z = 2020.01.01D02:03:04.005006007) , (g = \"G\"$\"1234-5678\") , (c = \"w\") , (t = 03:03:04.005) , (ts = 04:03:04.005006007)";
+        String expectedSql = "q) select testCol1, testCol2, testCol3, r, testCol5, testCol6, testCol7, testCol8, testCol9, z, g, str, c, t, ts from testTable PARTITION(p0)  where (testCol1 in (1i, 2i)) , (testCol2 = `abc) , ((testCol3 > 2 , testCol3 <= 20)) , (r = 1.5e) , (testCol5 = 1i) , (testCol6 = 0i) , (testCol7 = 1.2) , (testCol8 = 1b) , (testCol9 = 2020.01.01) , (z = 2020.01.01D02:03:04.005006007) , (g = \"G\"$\"1234-5678\") , (c = \"w\") , (t = 03:03:04.005) , (ts = 04:03:04.005006007)";
         PreparedStatement expectedPreparedStatement = Mockito.mock(PreparedStatement.class);
         Mockito.when(this.connection.prepareStatement(Mockito.eq(expectedSql))).thenReturn(expectedPreparedStatement);
 

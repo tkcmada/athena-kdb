@@ -486,13 +486,12 @@ public class KdbQueryStringBuilder
             }
             else if (singleValues.size() > 1) {
                 final StringBuilder insql = new StringBuilder();
-                insql.append("(");
+                insql.append(quote(columnName));
+                insql.append(" in (");
                 int count = 0;
                 for (Object val : singleValues) {
                     if (count > 0)
-                        insql.append(" or ");
-                    insql.append(quote(columnName));
-                    insql.append(" = ");
+                        insql.append(", ");
                     insql.append(toLiteral(val, type, columnName, column));
                     count++;
                 }
