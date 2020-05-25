@@ -476,7 +476,17 @@ public class KdbQueryStringBuilder
                     }
                     // If rangeConjuncts is null, then the range was ALL, which should already have been checked for
                     Preconditions.checkState(!rangeConjuncts.isEmpty());
-                    disjuncts.add("(" + Joiner.on(" , ").join(rangeConjuncts) + ")");
+                    StringBuilder rngsql = new StringBuilder();
+                    for (int i = 0; i < rangeConjuncts.size(); i++) {
+                        if (i > 0)
+                            rngsql.append(" and ");
+                        if (rangeConjuncts.size() > 0)
+                            rngsql.append("(");
+                        rngsql.append(rangeConjuncts.get(i));
+                        if (rangeConjuncts.size() > 0)
+                            rngsql.append(")");
+                    }
+                    disjuncts.add(rngsql.toString());
                 }
             }
 
