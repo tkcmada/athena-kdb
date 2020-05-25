@@ -59,6 +59,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Handles metadata for MySQL. User must have access to `schemata`, `tables`, `columns`, `partitions` tables in
@@ -133,6 +135,15 @@ public class KdbMetadataHandler
                 return list.build();
             }
         }
+    }
+
+    @Override
+    protected TableName getSchemaTableName(final ResultSet resultSet)
+            throws SQLException
+    {
+        return new TableName(
+                resultSet.getString("TABLE_SCHEM"),
+                kdbTableNameToAthenaTableName(resultSet.getString("TABLE_NAME")));
     }
 
     @Override
@@ -431,5 +442,62 @@ public class KdbMetadataHandler
     static char getKdbTypeChar(Field field)
     {
         return field.getMetadata().get(KDBTYPECHAR_KEY).charAt(0);
+    }
+
+    private static final ThreadLocal<Pattern> athenaTableNamePattern = new ThreadLocal<Pattern>() {
+        @Override
+        public Pattern initialValue()
+        {
+            return Pattern.compile("_[a-z]");
+        }
+    };
+
+    private static final ThreadLocal<Pattern> kdbTableNamePattern = new ThreadLocal<Pattern>() {
+        @Override
+        public Pattern initialValue()
+        {
+            return Pattern.compile("[A-Z]");
+        }
+    };
+
+    /**
+     * convert Athena table name to Kdb table name.<p>
+     * 
+     * i.e. _rate is converted into Rate.<br>
+     * i.e. _market_books is converted into MarketBooks.<br>
+     */
+    static public String athenaTableNameToKdbTableName(String athenaTableName)
+    {
+        final StringBuilder kdbTableName = new StringBuilder();
+        final Matcher m = athenaTableNamePattern.get().matcher(athenaTableName);
+        int p = 0;
+        while (m.find(p)) {
+            kdbTableName.append(athenaTableName.substring(p, m.start()));
+            kdbTableName.append(athenaTableName.substring(m.start() + 1, m.start() + 2).toUpperCase());
+            p = m.end();
+        }
+        kdbTableName.append(athenaTableName.substring(p));
+        return kdbTableName.toString();
+    }
+
+    /**
+     * convert Athena table name to Kdb table name.<p>
+     * 
+     * i.e. _rate is converted into Rate.<br>
+     * i.e. _market_books is converted into MarketBooks.<br>
+     */
+    static public String kdbTableNameToAthenaTableName(String kdbTableName)
+    {
+        final StringBuilder athenaTableName = new StringBuilder();
+        final Matcher m = kdbTableNamePattern.get().matcher(kdbTableName);
+        int p = 0;
+        while (m.find(p)) {
+            athenaTableName.append(kdbTableName.substring(p, m.start()));
+            athenaTableName.append("_");
+            athenaTableName.append(m.group().toLowerCase());
+            p = m.end();
+        }
+        athenaTableName.append(kdbTableName.substring(p));
+        return athenaTableName.toString();
     }
 }

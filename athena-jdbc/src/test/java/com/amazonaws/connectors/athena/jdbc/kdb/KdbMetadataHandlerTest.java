@@ -26,6 +26,7 @@ import org.apache.arrow.vector.types.DateUnit;
 import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -56,6 +57,18 @@ public class KdbMetadataHandlerTest
         // Mockito.when(this.secretsManager.getSecretValue(Mockito.eq(new GetSecretValueRequest().withSecretId("testSecret")))).thenReturn(new GetSecretValueResult().withSecretString("{\"username\": \"testUser\", \"password\": \"testPassword\"}"));
         // this.mySqlMetadataHandler = new MySqlMetadataHandler(databaseConnectionConfig, this.secretsManager, this.athena, this.jdbcConnectionFactory);
         // this.federatedIdentity = Mockito.mock(FederatedIdentity.class);
+    }
+
+    @Test
+    public void athenaTableNameToKdbTableNameTest() {
+        Assert.assertEquals("Rate"       , KdbMetadataHandler.athenaTableNameToKdbTableName("_rate"));
+        Assert.assertEquals("MarketBooks", KdbMetadataHandler.athenaTableNameToKdbTableName("_market_books"));
+    }
+
+    @Test
+    public void kdbTableNameToAthenaTableName() {
+        Assert.assertEquals("_rate"        , KdbMetadataHandler.kdbTableNameToAthenaTableName("Rate"));
+        Assert.assertEquals("_market_books", KdbMetadataHandler.kdbTableNameToAthenaTableName("MarketBooks"));
     }
 
     @Test

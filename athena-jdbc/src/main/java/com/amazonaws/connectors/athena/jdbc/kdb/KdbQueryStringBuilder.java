@@ -152,7 +152,7 @@ public class KdbQueryStringBuilder
     }
 
     @Override
-    protected String getFromClauseWithSplit(String catalog, String schema, String table, Split split)
+    protected String getFromClauseWithSplit(String catalog, String schema, String athenaTableName, Split split)
     {
         StringBuilder tableName = new StringBuilder();
         // if (!Strings.isNullOrEmpty(catalog)) {
@@ -161,7 +161,7 @@ public class KdbQueryStringBuilder
         // if (!Strings.isNullOrEmpty(schema)) {
         //     tableName.append(quote(schema)).append('.');
         // }
-        tableName.append(quote(table));
+        tableName.append(quote(KdbMetadataHandler.athenaTableNameToKdbTableName(athenaTableName)));
 
         String partitionName = split.getProperty(KdbMetadataHandler.BLOCK_PARTITION_COLUMN_NAME);
 
