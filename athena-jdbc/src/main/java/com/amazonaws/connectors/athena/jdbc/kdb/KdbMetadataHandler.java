@@ -449,11 +449,19 @@ public class KdbMetadataHandler
         return field.getMetadata().get(KDBTYPECHAR_KEY).charAt(0);
     }
 
+    private static final ThreadLocal<Pattern> athenaTableNamePattern2 = new ThreadLocal<Pattern>() {
+        @Override
+        public Pattern initialValue()
+        {
+            return Pattern.compile("__([^_]+?)__");
+        }
+    };
+
     private static final ThreadLocal<Pattern> athenaTableNamePattern = new ThreadLocal<Pattern>() {
         @Override
         public Pattern initialValue()
         {
-            return Pattern.compile("_[a-z]");
+            return Pattern.compile("_([a-z])");
         }
     };
 
@@ -468,21 +476,28 @@ public class KdbMetadataHandler
     /**
      * convert Athena table name to Kdb table name.<p>
      * 
+     * i.e. __usdjpy__ is converted into USDJPY
      * i.e. _rate is converted into Rate.<br>
      * i.e. _market_books is converted into MarketBooks.<br>
      */
     static public String athenaTableNameToKdbTableName(String athenaTableName)
     {
-        final StringBuilder kdbTableName = new StringBuilder();
-        final Matcher m = athenaTableNamePattern.get().matcher(athenaTableName);
+        String s = to_upper_case(athenaTableName, athenaTableNamePattern2.get());
+        return to_upper_case(s, athenaTableNamePattern.get());
+    }
+
+    static private String to_upper_case(String src, Pattern pattern)
+    {
+        final StringBuilder dst = new StringBuilder();
+        final Matcher m = pattern.matcher(src);
         int p = 0;
         while (m.find(p)) {
-            kdbTableName.append(athenaTableName.substring(p, m.start()));
-            kdbTableName.append(athenaTableName.substring(m.start() + 1, m.start() + 2).toUpperCase());
+            dst.append(src.substring(p, m.start()));
+            dst.append(m.group(1).toUpperCase());
             p = m.end();
         }
-        kdbTableName.append(athenaTableName.substring(p));
-        return kdbTableName.toString();
+        dst.append(src.substring(p));
+        return dst.toString();
     }
 
     /**
