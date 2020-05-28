@@ -206,7 +206,7 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
                             switch(kdbtypechar) {
                                 case 'F': //list of float
                                     final double[] doubles = (double[]) value;
-                                    LOGGER.info(String.format("ver1.1 list of float at %s : %s ", rowNum, Arrays.toString(doubles)));
+                                    LOGGER.info(String.format("ver1.2 list of float at %s with constraints %s : %s ", rowNum, constraint, Arrays.toString(doubles)));
 
                                     UnionListWriter writer = ((ListVector) vector).getWriter();
                                     writer.setPosition(rowNum);
@@ -215,12 +215,12 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
                                     for(int i = 0; i < doubles.length; i++) {
                                         final double val = doubles[i];
                                         //TODO should check constraints
-                                        if(Double.isNaN(val)) {
-                                            writer.setPosition(writer.getPosition()+1);
-                                        }
-                                        else {
+                                        // if(Double.isNaN(val)) { //null representative is ignored for now.
+                                        //     writer.setPosition(writer.getPosition()+1);
+                                        // }
+                                        // else {
                                             writer.writeFloat8(val);
-                                        }
+                                        // }
                                     }
                                     writer.endList();
                                     //end of writeList
