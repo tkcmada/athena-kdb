@@ -217,7 +217,7 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
                                     for(int i = 0; i < doubles.length; i++) {
                                         //TODO should check constraints
                                         if(Double.isNaN(doubles[i])) {
-                                            writer.writeNull();
+                                            // writer.writeNull();
                                         }
                                         else {
                                             writer.writeFloat8(doubles[i]);
@@ -230,7 +230,7 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
                                     for(int i = 0; i < longs.length; i++) {
                                         //TODO should check constraints
                                         if(longs[i] == Long.MIN_VALUE) {
-                                            writer.writeNull();
+                                            // writer.writeNull();
                                         }
                                         else {
                                             writer.writeBigInt(longs[i]);
@@ -243,7 +243,7 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
                                     for(int i = 0; i < ints.length; i++) {
                                         //TODO should check constraints
                                         if(ints[i] == Integer.MIN_VALUE) {
-                                            writer.writeNull();
+                                            // writer.writeNull();
                                         }
                                         else {
                                             writer.writeInt(ints[i]);
@@ -264,7 +264,7 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
                                     for(int i = 0; i < symbols.length; i++) {
                                         //TODO should check constraints
                                         if (symbols[i] == null) {
-                                            writer.writeNull();
+                                            // writer.writeNull();
                                         }
                                         else {
                                             writeString(symbols[i], (ListVector) vector, writer);
@@ -277,7 +277,7 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
                                     for(int i = 0; i < timestamps.length; i++) {
                                         //TODO should check constraints
                                         if (timestamps[i] == null) {
-                                            writer.writeNull();
+                                            // writer.writeNull();
                                         }
                                         else {
                                             writeString(KdbQueryStringBuilder.toLiteral(timestamps[i], Types.MinorType.VARCHAR, KdbTypes.timestamp_type), (ListVector) vector, writer);
