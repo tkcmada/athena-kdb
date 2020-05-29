@@ -44,6 +44,7 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.secretsmanager.AWSSecretsManager;
 import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
@@ -51,6 +52,7 @@ import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.complex.ListVector;
 import org.apache.arrow.vector.complex.impl.UnionListWriter;
 import org.apache.arrow.vector.complex.writer.BaseWriter.ListWriter;
+import org.apache.arrow.vector.ipc.message.ArrowBuffer;
 import org.apache.arrow.vector.types.Types;
 import org.apache.arrow.vector.types.Types.MinorType;
 import org.apache.arrow.vector.types.pojo.Field;
@@ -59,6 +61,8 @@ import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.netty.buffer.ArrowBuf;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -203,32 +207,88 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
                 final FieldWriter fieldwriter = (Object context, int rowNum) -> {
                         final Object value = resultSet.getObject(fieldName);
                         if (value != null) {
+                            UnionListWriter writer = ((ListVector) vector).getWriter();
+                            writer.setPosition(rowNum);
+                            writer.startList();
                             switch(kdbtypechar) {
                                 case 'F': //list of float
-                                    final double[] doubles = (double[]) value;
-                                    LOGGER.info(String.format("ver1.2 list of float at %s with constraints %s : %s ", rowNum, constraint, Arrays.toString(doubles)));
-
-                                    UnionListWriter writer = ((ListVector) vector).getWriter();
-                                    writer.setPosition(rowNum);
-                                    //writeList
-                                    writer.startList();
+                                    double[] doubles = (double[]) value;
+                                    LOGGER.info(String.format("list at %s with constraints %s : %s ", rowNum, constraint, Arrays.toString(doubles)));
                                     for(int i = 0; i < doubles.length; i++) {
-                                        final double val = doubles[i];
                                         //TODO should check constraints
-                                        // if(Double.isNaN(val)) { //null representative is ignored for now.
-                                        //     writer.setPosition(writer.getPosition()+1);
-                                        // }
-                                        // else {
-                                            writer.writeFloat8(val);
-                                        // }
+                                        if(Double.isNaN(doubles[i])) {
+                                            writer.writeNull();
+                                        }
+                                        else {
+                                            writer.writeFloat8(doubles[i]);
+                                        }
                                     }
-                                    writer.endList();
-                                    //end of writeList
-                                    ((ListVector) vector).setNotNull(rowNum);
+                                    break;
+                                case 'J': //list of long
+                                    long[] longs = (long[]) value;
+                                    LOGGER.info(String.format("list at %s with constraints %s : %s ", rowNum, constraint, Arrays.toString(longs)));
+                                    for(int i = 0; i < longs.length; i++) {
+                                        //TODO should check constraints
+                                        if(longs[i] == Long.MIN_VALUE) {
+                                            writer.writeNull();
+                                        }
+                                        else {
+                                            writer.writeBigInt(longs[i]);
+                                        }
+                                    }
+                                    break;
+                                case 'I': //list of int
+                                    int[] ints = (int[]) value;
+                                    LOGGER.info(String.format("list at %s with constraints %s : %s ", rowNum, constraint, Arrays.toString(ints)));
+                                    for(int i = 0; i < ints.length; i++) {
+                                        //TODO should check constraints
+                                        if(ints[i] == Integer.MIN_VALUE) {
+                                            writer.writeNull();
+                                        }
+                                        else {
+                                            writer.writeInt(ints[i]);
+                                        }
+                                    }
+                                    break;
+                                case 'X': //list of byte
+                                    byte[] bytes = (byte[]) value;
+                                    LOGGER.info(String.format("list at %s with constraints %s : %s ", rowNum, constraint, Arrays.toString(bytes)));
+                                    for(int i = 0; i < bytes.length; i++) {
+                                        //TODO should check constraints
+                                        writer.writeTinyInt(bytes[i]);
+                                    }
+                                    break;
+                                case 'S': //list of symbol
+                                    String[] symbols = (String[]) value;
+                                    LOGGER.info(String.format("list at %s with constraints %s : %s ", rowNum, constraint, Arrays.toString(symbols)));
+                                    for(int i = 0; i < symbols.length; i++) {
+                                        //TODO should check constraints
+                                        if (symbols[i] == null) {
+                                            writer.writeNull();
+                                        }
+                                        else {
+                                            writeString(symbols[i], (ListVector) vector, writer);
+                                        }
+                                    }
+                                    break;
+                                case 'P': //list of timestamp
+                                    Timestamp[] timestamps = (Timestamp[]) value;
+                                    LOGGER.info(String.format("list at %s with constraints %s : %s ", rowNum, constraint, Arrays.toString(timestamps)));
+                                    for(int i = 0; i < timestamps.length; i++) {
+                                        //TODO should check constraints
+                                        if (timestamps[i] == null) {
+                                            writer.writeNull();
+                                        }
+                                        else {
+                                            writeString(KdbQueryStringBuilder.toLiteral(timestamps[i], Types.MinorType.VARCHAR, KdbTypes.timestamp_type), (ListVector) vector, writer);
+                                        }
+                                    }
                                     break;
                                 default:
                                     throw new IllegalArgumentException("unsupported kdbtypechar " + kdbtypechar);
                             }
+                            writer.endList();
+                            ((ListVector) vector).setNotNull(rowNum);
                         }
                         return true;
                 };
@@ -242,6 +302,13 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
         }
     }
 
+    private static void writeString(String value, ListVector vector, UnionListWriter writer) {
+        byte[] bytes = value.getBytes(Charsets.UTF_8);
+        try (ArrowBuf buf = vector.getAllocator().buffer(bytes.length)) {
+            buf.writeBytes(bytes);
+            writer.varChar().writeVarChar(0, buf.readableBytes(), buf);
+        }                                
+    }
 
     @VisibleForTesting
     static String toVarChar(int[] a)

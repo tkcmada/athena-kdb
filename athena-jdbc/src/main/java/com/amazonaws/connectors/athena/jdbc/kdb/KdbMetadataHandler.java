@@ -231,13 +231,34 @@ public class KdbMetadataHandler
                             schemaBuilder.addField(newField(colname, Types.MinorType.DATEDAY, KdbTypes.date_type));
                             break;
                         case 'J':
-                            schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.list_of_long_type));
+                            if (isListMappedToArray())
+                            {
+                                schemaBuilder.addField(newListField(colname, KdbTypes.list_of_long_type, Types.MinorType.BIGINT, KdbTypes.long_type));
+                            }
+                            else
+                            {
+                                schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.list_of_long_type));
+                            }
                             break;
                         case 'I':
-                            schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.list_of_int_type));
+                            if (isListMappedToArray())
+                            {
+                                schemaBuilder.addField(newListField(colname, KdbTypes.list_of_int_type, Types.MinorType.INT, KdbTypes.int_type));
+                            }
+                            else
+                            {
+                                schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.list_of_int_type));
+                            }
                             break;
                         case 'X':
-                            schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.list_of_byte_type));
+                            if (isListMappedToArray())
+                            {
+                                schemaBuilder.addField(newListField(colname, KdbTypes.list_of_byte_type, Types.MinorType.TINYINT, KdbTypes.byte_type));
+                            }
+                            else
+                            {
+                                schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.list_of_byte_type));
+                            }
                             break;
                         case 'F':
                             if (isListMappedToArray())
@@ -250,10 +271,24 @@ public class KdbMetadataHandler
                             }
                             break;
                         case 'S':
-                            schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.list_of_symbol_type));
+                            if (isListMappedToArray())
+                            {
+                                schemaBuilder.addField(newListField(colname, KdbTypes.list_of_symbol_type, Types.MinorType.VARCHAR, KdbTypes.symbol_type));
+                            }
+                            else
+                            {
+                                schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.list_of_symbol_type));
+                            }
                             break;
                         case 'P':
-                            schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.list_of_timestamp_type));
+                            if (isListMappedToArray())
+                            {
+                                schemaBuilder.addField(newListField(colname, KdbTypes.list_of_timestamp_type, Types.MinorType.VARCHAR, KdbTypes.timestamp_type));
+                            }
+                            else
+                            {
+                                schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.list_of_timestamp_type));
+                            }
                             break;
                         default:
                             LOGGER.error("getSchema: Unable to map type for column[" + colname + "] to a supported type, attempted '" + coltype + "'");
