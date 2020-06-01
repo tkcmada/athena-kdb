@@ -276,7 +276,7 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
                                     LOGGER.info(String.format("list at %s with constraints %s : %s ", rowNum, constraint, Arrays.toString(timestamps)));
                                     for(int i = 0; i < timestamps.length; i++) {
                                         //TODO should check constraints
-                                        if (timestamps[i] == null) {
+                                        if (timestamps[i].getTime() == Long.MIN_VALUE) {
                                             // writer.writeNull();
                                         }
                                         else {
