@@ -352,6 +352,7 @@ public class KdbQueryStringBuilder
                         else {
                             if (value instanceof Timestamp) {
                                 final Timestamp timestamp = (Timestamp) value;
+                                LOGGER.info(String.format("timestamp#getTime:%s, getNanos:%s", timestamp.getTime(), timestamp.getNanos()));
                                 return TIMESTAMP_FORMAT.get().apply(timestamp);
                             }
                             else {
