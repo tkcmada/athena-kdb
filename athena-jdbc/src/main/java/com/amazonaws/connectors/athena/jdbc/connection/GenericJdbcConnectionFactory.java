@@ -42,7 +42,7 @@ import java.util.regex.Pattern;
 public class GenericJdbcConnectionFactory
         implements JdbcConnectionFactory
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(GenericJdbcConnectionFactory.class);
+    private static final java.util.logging.Logger LOGGER = LoggerFactory.getLogger(GenericJdbcConnectionFactory.class);
 
     private static final String KDB_DRIVER_CLASS = "jdbc";
     private static final int KDB_DEFAULT_PORT = 5001;
@@ -105,6 +105,7 @@ public class GenericJdbcConnectionFactory
             LOGGER.info("getConnection " + derivedJdbcString);
             LOGGER.info("jdbcProperties=" + (jdbcProperties == null ? "null" : jdbcProperties.toString()));
 
+            LOGGER.info("debug v1");
             //kdb only
             if(databaseConnectionConfig.getType() == DatabaseEngine.KDB) {
                 int p = derivedJdbcString.indexOf("?");
@@ -126,6 +127,7 @@ public class GenericJdbcConnectionFactory
                     LOGGER.info("new jdbcProperties=" + (jdbcProperties == null ? "null" : jdbcProperties.toString()));
                     Class.forName(databaseConnectionInfo.getDriverClassName());
                 }
+                LOGGER.info("connectionString=" + String.valueOf(derivedJdbcString) + " , user=" + String.valueOf(user) + ", password=" + String.valueOf(password));
                 return DriverManager.getConnection(derivedJdbcString, user, password);
             }
             else
