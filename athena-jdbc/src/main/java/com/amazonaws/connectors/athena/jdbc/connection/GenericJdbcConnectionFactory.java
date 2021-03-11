@@ -135,7 +135,7 @@ public class GenericJdbcConnectionFactory
             }
         }
         catch (SQLException sqlException) {
-            throw new RuntimeException(sqlException.getErrorCode() + ": " + sqlException);
+            throw new RuntimeException(sqlException.getErrorCode() + ": " + sqlException, ex);
         }
         catch (ClassNotFoundException | IllegalAccessException | InstantiationException ex) {
             throw new RuntimeException(ex);
