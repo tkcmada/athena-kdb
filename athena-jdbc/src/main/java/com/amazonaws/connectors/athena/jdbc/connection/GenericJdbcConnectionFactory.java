@@ -120,6 +120,7 @@ public class GenericJdbcConnectionFactory
                     }
                     LOGGER.info("new getConnection " + derivedJdbcString);
                     LOGGER.info("new jdbcProperties=" + (jdbcProperties == null ? "null" : jdbcProperties.toString()));
+                    Class.forName(databaseConnectionInfo.getDriverClassName());
                 }
             }
 
