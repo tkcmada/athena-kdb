@@ -108,6 +108,8 @@ public class GenericJdbcConnectionFactory
             //kdb only
             if(databaseConnectionConfig.getType() == DatabaseEngine.KDB) {
                 int p = derivedJdbcString.indexOf("?");
+                String user = "";
+                String password  = "";
                 if(p > 0) {
                     String propstr = derivedJdbcString.substring(p + 1);
                     derivedJdbcString = derivedJdbcString.substring(0, p);
@@ -117,15 +119,20 @@ public class GenericJdbcConnectionFactory
                         String name = nameval[0];
                         String val = nameval.length > 1 ? nameval[1] : null;
                         jdbcProperties.put(name, val);
+                        if(name.equals("user")) user = val;
+                        else if(name.equals("password")) password = val;
                     }
                     LOGGER.info("new getConnection " + derivedJdbcString);
                     LOGGER.info("new jdbcProperties=" + (jdbcProperties == null ? "null" : jdbcProperties.toString()));
                     Class.forName(databaseConnectionInfo.getDriverClassName());
                 }
+                return DriverManager.getConnection(derivedJdbcString, user, password);
             }
-
-            // create connection
-            return DriverManager.getConnection(derivedJdbcString, this.jdbcProperties);
+            else
+            {
+                // create connection
+                return DriverManager.getConnection(derivedJdbcString, this.jdbcProperties);
+            }
         }
         catch (SQLException sqlException) {
             throw new RuntimeException(sqlException.getErrorCode() + ": " + sqlException);
