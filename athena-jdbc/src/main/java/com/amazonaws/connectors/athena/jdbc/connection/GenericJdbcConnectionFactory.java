@@ -88,7 +88,7 @@ public class GenericJdbcConnectionFactory
         try {
             DatabaseConnectionInfo databaseConnectionInfo = CONNECTION_INFO.get(this.databaseConnectionConfig.getType());
 
-            final String derivedJdbcString;
+            String derivedJdbcString;
             if (jdbcCredentialProvider != null) {
                 Matcher secretMatcher = SECRET_NAME_PATTERN.matcher(databaseConnectionConfig.getJdbcConnectionString());
                 final String secretReplacement = String.format("user=%s&password=%s", jdbcCredentialProvider.getCredential().getUser(),
@@ -104,6 +104,24 @@ public class GenericJdbcConnectionFactory
             
             LOGGER.info("getConnection " + derivedJdbcString);
             LOGGER.info("jdbcProperties=" + (jdbcProperties == null ? "null" : jdbcProperties.toString()));
+
+            //kdb only
+            if(databaseConnectionConfig.getType() == DatabaseEngine.KDB) {
+                int p = derivedJdbcString.indexOf("?");
+                if(p > 0) {
+                    String propstr = derivedJdbcString.substring(p + 1);
+                    derivedJdbcString = derivedJdbcString.substring(0, p);
+                    LOGGER.info("property string:" + propstr);
+                    for(String namevalstr : propstr.split("&")) {
+                        String[] nameval = namevalstr.split("=");
+                        String name = nameval[0];
+                        String val = nameval.length > 1 ? nameval[1] : null;
+                        jdbcProperties.put(name, val);
+                    }
+                    LOGGER.info("new getConnection " + derivedJdbcString);
+                    LOGGER.info("new jdbcProperties=" + (jdbcProperties == null ? "null" : jdbcProperties.toString()));
+                }
+            }
 
             // create connection
             return DriverManager.getConnection(derivedJdbcString, this.jdbcProperties);
