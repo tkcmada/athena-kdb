@@ -1,0 +1,5 @@
+#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
+#Mon Apr 27 22:55:13 UTC 2020
+https\://s3.amazonaws.com/redshift-maven-repository/release/.error=
+https\://repo.maven.apache.org/maven2/.lastUpdated=1588028113024
+https\://s3.amazonaws.com/redshift-maven-repository/release/.lastUpdated=1588028113004

@@ -1,0 +1,6 @@
+#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
+#Wed Apr 29 07:45:54 UTC 2020
+aws-athena-federation-sdk-2020.18.1.jar>=
+aws-athena-federation-sdk-2020.18.1-withdep.jar>=
+aws-athena-federation-sdk-2020.18.1.pom>=
+aws-athena-federation-sdk-2020.18.1-with-arrow.jar>=

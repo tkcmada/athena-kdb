@@ -1,0 +1,5 @@
+#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
+#Mon Apr 27 22:55:11 UTC 2020
+https\://repo.maven.apache.org/maven2/.lastUpdated=1588028111466
+https\://s3-us-west-2.amazonaws.com/dynamodb-local/release/.lastUpdated=1588028111207
+https\://s3-us-west-2.amazonaws.com/dynamodb-local/release/.error=
