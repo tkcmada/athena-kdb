@@ -42,7 +42,7 @@ import java.util.regex.Pattern;
 public class GenericJdbcConnectionFactory
         implements JdbcConnectionFactory
 {
-    private static final java.util.logging.Logger LOGGER = LoggerFactory.getLogger(GenericJdbcConnectionFactory.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(GenericJdbcConnectionFactory.class);
 
     private static final String KDB_DRIVER_CLASS = "jdbc";
     private static final int KDB_DEFAULT_PORT = 5001;
@@ -137,7 +137,7 @@ public class GenericJdbcConnectionFactory
             }
         }
         catch (SQLException sqlException) {
-            throw new RuntimeException(sqlException.getErrorCode() + ": " + sqlException, ex);
+            throw new RuntimeException(sqlException.getErrorCode() + ": " + sqlException, sqlException);
         }
         catch (ClassNotFoundException | IllegalAccessException | InstantiationException ex) {
             throw new RuntimeException(ex);
