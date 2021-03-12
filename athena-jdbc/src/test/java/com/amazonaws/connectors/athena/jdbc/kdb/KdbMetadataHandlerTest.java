@@ -65,6 +65,7 @@ public class KdbMetadataHandlerTest
         Assert.assertEquals("MarketBooks", KdbMetadataHandler.athenaTableNameToKdbTableName("_market_books"));
         Assert.assertEquals("`USDJPY;`V1" , KdbMetadataHandler.athenaTableNameToKdbTableName("`__usdjpy__;`_v1"));
         Assert.assertEquals("`USDJPY;`V1" , KdbMetadataHandler.athenaTableNameToKdbTableName("__`usdjpy;`v1__"));
+        Assert.assertEquals("OHLC_30m", KdbMetadataHandler.athenaTableNameToKdbTableName("__ohlc___30m"));
     }
 
     @Test
