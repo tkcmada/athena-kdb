@@ -115,7 +115,7 @@ public class GenericJdbcConnectionFactory
                     String propstr = derivedJdbcString.substring(p + 1);
                     derivedJdbcString = derivedJdbcString.substring(0, p);
                     LOGGER.info("property string:" + propstr);
-                    for(String namevalstr : propstr.split("&")) {
+                    for(String namevalstr : propstr.split("&", 2)) {
                         String[] nameval = namevalstr.split("=", 2);
                         String name = nameval[0];
                         String val = nameval.length > 1 ? nameval[1] : null;
