@@ -60,7 +60,7 @@ import java.util.stream.Collectors;
 public class KdbQueryStringBuilder
         extends JdbcSplitQueryBuilder
 {
-    private static final java.util.logging.Logger LOGGER = LoggerFactory.getLogger(KdbQueryStringBuilder.class);
+    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(KdbQueryStringBuilder.class);
     private static final org.joda.time.LocalDateTime EPOCH = new org.joda.time.LocalDateTime(1970, 1, 1, 0, 0);
 
     public KdbQueryStringBuilder(final String quoteCharacters)
@@ -214,7 +214,7 @@ public class KdbQueryStringBuilder
 
     static String toLiteral(Object value, ArrowType type, String columnName, Field column)
     {        
-        if(LOGGER.isLoggable(Level.DEBUG)) LOGGER.debug("column:" + String.valueOf(columnName) + " value:" + String.valueOf(value));
+        if(LOGGER.isDebugEnabled()) LOGGER.debug("column:" + String.valueOf(columnName) + " value:" + String.valueOf(value));
         String literal = toLiteral(value, Types.getMinorTypeForArrowType(type), KdbTypes.valueOf(column.getMetadata().get(KdbMetadataHandler.KDBTYPE_KEY)));
         return literal;
     }
@@ -222,15 +222,15 @@ public class KdbQueryStringBuilder
     @VisibleForTesting
     static String toLiteral(Object value, Types.MinorType minorTypeForArrowType, KdbTypes kdbtype)
     {
-        if(LOGGER.isLoggable(Level.DEBUG)) LOGGER.debug("kdbtype:" + String.valueOf(kdbtype) + " minorTypeForArrowType:" + String.valueOf(minorTypeForArrowType) + " value:" + String.valueOf(value) + (value == null ? "null" : value.getClass().getName()));
+        if(LOGGER.isDebugEnabled()) LOGGER.debug("kdbtype:" + String.valueOf(kdbtype) + " minorTypeForArrowType:" + String.valueOf(minorTypeForArrowType) + " value:" + String.valueOf(value) + (value == null ? "null" : value.getClass().getName()));
         final String literal = _toLiteral(value, minorTypeForArrowType, kdbtype);
-       if(LOGGER.isLoggable(Level.DEBUG)) LOGGER.debug("literal:" + String.valueOf(literal));
+        if(LOGGER.isDebugEnabled()) LOGGER.debug("literal:" + String.valueOf(literal));
         return literal;
     }
 
     static private String _toLiteral(Object value, Types.MinorType minorTypeForArrowType, KdbTypes kdbtype)
     {
-        if(LOGGER.isLoggable(Level.DEBUG)) LOGGER.debug("minortype:" + String.valueOf(minorTypeForArrowType) + " kdbtype:" + String.valueOf(kdbtype) + " value:" + String.valueOf(value) + " valuetype:" + (value == null ? "null" : value.getClass().getName()));
+        if(LOGGER.isDebugEnabled()) LOGGER.debug("minortype:" + String.valueOf(minorTypeForArrowType) + " kdbtype:" + String.valueOf(kdbtype) + " value:" + String.valueOf(value) + " valuetype:" + (value == null ? "null" : value.getClass().getName()));
 
         switch (minorTypeForArrowType) {
             case BIGINT:
@@ -352,7 +352,7 @@ public class KdbQueryStringBuilder
                         else {
                             if (value instanceof Timestamp) {
                                 final Timestamp timestamp = (Timestamp) value;
-                                if(LOGGER.isLoggable(Level.DEBUG)) LOGGER.debug(String.format("timestamp#getTime:%s, getNanos:%s", timestamp.getTime(), timestamp.getNanos()));
+                                if(LOGGER.isDebugEnabled()) LOGGER.debug(String.format("timestamp#getTime:%s, getNanos:%s", timestamp.getTime(), timestamp.getNanos()));
                                 return TIMESTAMP_FORMAT.get().apply(timestamp);
                             }
                             else {
