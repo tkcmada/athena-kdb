@@ -47,6 +47,8 @@ MarketBooks
 MarketBooksNoNull: ([] universal_id:( (1?0Ng)[0]; (1?0Ng)[0] ); sym:`USDJPY`USDJPY; version_id:`V1`V2; bid_prices:((100.01; 100.02); (200.01; 200.02)); bid_amounts:((1000000; 2000000); (3000000; 4000000) ); ask_amounts:((1000001; 2000001); (3000001; 4000001) ) )
 meta MarketBooksNoNull
 MarketBooksNoNull
+
+t5:([] name:`USDJPY`EURUSD; s:("AAA"; "BBB"); s1:(("CCC"; "DDD"); ("AAA"; "BBB")) )
 ```
 
 How to specify JDBC Connection String ?

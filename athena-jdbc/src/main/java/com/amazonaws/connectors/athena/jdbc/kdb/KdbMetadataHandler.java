@@ -191,8 +191,10 @@ public class KdbMetadataHandler
                 while (rs.next()) {
                     String colname = rs.getString("COLUMN_NAME");
                     Character coltypeobj = (Character) rs.getObject("COLUMN_TYPE");
+                    LOGGER.info("schema column mapping..." + colname + " " + String.valueOf(coltypeobj));
+                    if(coltypeobj == null)
+                        throw new IllegalArgumentException("Cannot perform query because column " + colname + " has null COLUMN_TYPE. " + "table " + kdbTableName);
                     char coltype = (char) coltypeobj;
-                    LOGGER.info("schema column mapping..." + colname + " " + coltype);
                     switch (coltype) {
                         case 'b':
                             schemaBuilder.addField(newField(colname, Types.MinorType.BIT, KdbTypes.bit_type));
