@@ -55,6 +55,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -75,7 +76,7 @@ public class KdbMetadataHandler
     static final String BLOCK_PARTITION_COLUMN_NAME = "partition_name";
     static final String ALL_PARTITIONS = "*";
     static final String PARTITION_COLUMN_NAME = "partition_name";
-    private static final Logger LOGGER = LoggerFactory.getLogger(KdbMetadataHandler.class);
+    private static final java.util.logging.Logger LOGGER = LoggerFactory.getLogger(KdbMetadataHandler.class);
     private static final int MAX_SPLITS_PER_REQUEST = 1000_000;
     public static final String KDBTYPE_KEY = "kdbtype";
     public static final String KDBTYPECHAR_KEY = "kdbtypechar";
@@ -124,6 +125,7 @@ public class KdbMetadataHandler
     protected List<TableName> listTables(final Connection jdbcConnection, final String databaseName)
             throws SQLException
     {
+        LOGGER.info("listTables - " + databaseName);
         try (Statement stmt = jdbcConnection.createStatement()) {
             final String SCHEMA_QUERY = "q) flip ( `TABLE_NAME`TABLE_SCHEM ! ( tables[]; (count(tables[]))#(enlist \"" + DEFAULT_SCHEMA_NAME + "\") ) )";
             try (ResultSet resultSet = stmt.executeQuery(SCHEMA_QUERY)) {
@@ -145,6 +147,8 @@ public class KdbMetadataHandler
                 resultSet.getString("TABLE_SCHEM"),
                 kdbTableNameToAthenaTableName(resultSet.getString("TABLE_NAME")));
     }
+
+    private static final Map<String, String> kdbtbl_by_athenatbl = new HashMap<>();
 
     @Override
     protected Schema getSchema(Connection jdbcConnection, TableName tableName, Schema partitionSchema)
@@ -517,6 +521,10 @@ public class KdbMetadataHandler
      */
     static public String athenaTableNameToKdbTableName(String athenaTableName)
     {
+        String kdbTableName = kdbtbl_by_athenatbl.get(athenaTableName);
+        if(kdbTableName != null)
+            return kdbTableName;
+        //if table mapping doesn't exist, just apply naming rule.
         String s = to_upper_case(athenaTableName, athenaTableNamePattern2.get());
         return to_upper_case(s, athenaTableNamePattern.get());
     }
@@ -543,16 +551,20 @@ public class KdbMetadataHandler
      */
     static public String kdbTableNameToAthenaTableName(String kdbTableName)
     {
-        final StringBuilder athenaTableName = new StringBuilder();
-        final Matcher m = kdbTableNamePattern.get().matcher(kdbTableName);
-        int p = 0;
-        while (m.find(p)) {
-            athenaTableName.append(kdbTableName.substring(p, m.start()));
-            athenaTableName.append("_");
-            athenaTableName.append(m.group().toLowerCase());
-            p = m.end();
-        }
-        athenaTableName.append(kdbTableName.substring(p));
-        return athenaTableName.toString();
+        String athenaTableName = kdbTableName.toLowerCase();
+        LOGGER.info("register kdbTableNameToAthenaTableName mapping:" + athenaTableName + "->" + kdbTableName);
+        kdbtbl_by_athenatbl.put(athenaTableName, kdbTableName);
+        return athenaTableName;
+        // final StringBuilder athenaTableName = new StringBuilder();
+        // final Matcher m = kdbTableNamePattern.get().matcher(kdbTableName);
+        // int p = 0;
+        // while (m.find(p)) {
+        //     athenaTableName.append(kdbTableName.substring(p, m.start()));
+        //     athenaTableName.append("_");
+        //     athenaTableName.append(m.group().toLowerCase());
+        //     p = m.end();
+        // }
+        // athenaTableName.append(kdbTableName.substring(p));
+        // return athenaTableName.toString();
     }
 }
