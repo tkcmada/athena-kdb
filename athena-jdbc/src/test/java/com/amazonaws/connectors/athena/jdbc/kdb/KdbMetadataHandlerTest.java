@@ -64,15 +64,17 @@ public class KdbMetadataHandlerTest
         Assert.assertEquals("rate"        , KdbMetadataHandler.kdbTableNameToAthenaTableName("Rate"));
         Assert.assertEquals("marketbooks" , KdbMetadataHandler.kdbTableNameToAthenaTableName("MarketBooks"));
         Assert.assertEquals("timezonetab" , KdbMetadataHandler.kdbTableNameToAthenaTableName("timezoneTab"));
+        Assert.assertEquals("ohlc_30m"    , KdbMetadataHandler.kdbTableNameToAthenaTableName("OHLC_30m"));
 
         Assert.assertEquals("Rate"       , KdbMetadataHandler.athenaTableNameToKdbTableName("rate"));
         Assert.assertEquals("MarketBooks", KdbMetadataHandler.athenaTableNameToKdbTableName("marketbooks"));
         Assert.assertEquals("timezoneTab", KdbMetadataHandler.athenaTableNameToKdbTableName("timezonetab"));
+        Assert.assertEquals("OHLC_30m"   , KdbMetadataHandler.athenaTableNameToKdbTableName("ohlc_30m"));
 
         //if mapping doesn't exist, just use naming rule.
         // Assert.assertEquals("`USDJPY;`V1" , KdbMetadataHandler.athenaTableNameToKdbTableName("`__usdjpy__;`_v1"));
         Assert.assertEquals("`USDJPY;`V1" , KdbMetadataHandler.athenaTableNameToKdbTableName("__`usdjpy;`v1__"));
-        Assert.assertEquals("OHLC_30m", KdbMetadataHandler.athenaTableNameToKdbTableName("__ohlc___30m"));
+        Assert.assertEquals("HOGE_30m", KdbMetadataHandler.athenaTableNameToKdbTableName("__hoge___30m"));
     }
 
     @Test
