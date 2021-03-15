@@ -62,10 +62,12 @@ public class KdbMetadataHandlerTest
     @Test
     public void kdbTableNameToAthenaTableName_and_athenaTableNameToKdbTableNameTest() {
         Assert.assertEquals("rate"        , KdbMetadataHandler.kdbTableNameToAthenaTableName("Rate"));
-        Assert.assertEquals("marketbooks", KdbMetadataHandler.kdbTableNameToAthenaTableName("MarketBooks"));
+        Assert.assertEquals("marketbooks" , KdbMetadataHandler.kdbTableNameToAthenaTableName("MarketBooks"));
+        Assert.assertEquals("timezonetab" , KdbMetadataHandler.kdbTableNameToAthenaTableName("timezoneTab"));
 
         Assert.assertEquals("Rate"       , KdbMetadataHandler.athenaTableNameToKdbTableName("rate"));
         Assert.assertEquals("MarketBooks", KdbMetadataHandler.athenaTableNameToKdbTableName("marketbooks"));
+        Assert.assertEquals("timezoneTab", KdbMetadataHandler.athenaTableNameToKdbTableName("timezonetab"));
 
         //if mapping doesn't exist, just use naming rule.
         Assert.assertEquals("`USDJPY;`V1" , KdbMetadataHandler.athenaTableNameToKdbTableName("`__usdjpy__;`_v1"));

@@ -76,7 +76,7 @@ public class KdbMetadataHandler
     static final String BLOCK_PARTITION_COLUMN_NAME = "partition_name";
     static final String ALL_PARTITIONS = "*";
     static final String PARTITION_COLUMN_NAME = "partition_name";
-    private static final java.util.logging.Logger LOGGER = LoggerFactory.getLogger(KdbMetadataHandler.class);
+    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(KdbMetadataHandler.class);
     private static final int MAX_SPLITS_PER_REQUEST = 1000_000;
     public static final String KDBTYPE_KEY = "kdbtype";
     public static final String KDBTYPECHAR_KEY = "kdbtypechar";
@@ -121,11 +121,18 @@ public class KdbMetadataHandler
         return schemaNames.build();
     }
 
+    private void cacheSchema(final Connection jdbcConnection) throws SQLException {
+        if(! kdbtbl_by_athenatbl.isEmpty())
+            return;
+        LOGGER.info("schema is not cached yet. caching...");
+        listTables(jdbcConnection, null);
+    }
+
     @Override
-    protected List<TableName> listTables(final Connection jdbcConnection, final String databaseName)
+    protected List<TableName> listTables(final Connection jdbcConnection, final String not_used_databaseName)
             throws SQLException
     {
-        LOGGER.info("listTables - " + databaseName);
+        LOGGER.info("listTables...");
         try (Statement stmt = jdbcConnection.createStatement()) {
             final String SCHEMA_QUERY = "q) flip ( `TABLE_NAME`TABLE_SCHEM ! ( tables[]; (count(tables[]))#(enlist \"" + DEFAULT_SCHEMA_NAME + "\") ) )";
             try (ResultSet resultSet = stmt.executeQuery(SCHEMA_QUERY)) {
@@ -171,6 +178,7 @@ public class KdbMetadataHandler
         // LIST(Types.MinorType.LIST);
 
         LOGGER.info("getSchema...");
+        cacheSchema(jdbcConnection);
         SchemaBuilder schemaBuilder = SchemaBuilder.newBuilder();
         try (Statement stmt = jdbcConnection.createStatement()) {
             final String athenaTableName = tableName.getTableName();
