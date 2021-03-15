@@ -192,8 +192,11 @@ public class KdbMetadataHandler
                     String colname = rs.getString("COLUMN_NAME");
                     Character coltypeobj = (Character) rs.getObject("COLUMN_TYPE");
                     LOGGER.info("schema column mapping..." + colname + " " + String.valueOf(coltypeobj));
-                    if(coltypeobj == null)
-                        throw new IllegalArgumentException("Cannot perform query because column " + colname + " has null COLUMN_TYPE. " + "table " + kdbTableName);
+                    if(coltypeobj == null) {
+                        //throw new IllegalArgumentException("Cannot perform query because column " + colname + " has null COLUMN_TYPE. " + "table " + kdbTableName);
+                        LOGGER.info("assuming this col type is list of list of char");
+                        coltypeobj = 'V';
+                    }
                     char coltype = (char) coltypeobj;
                     switch (coltype) {
                         case 'b':
@@ -302,6 +305,16 @@ public class KdbMetadataHandler
                             else
                             {
                                 schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.list_of_timestamp_type));
+                            }
+                            break;
+                        case 'V': //list of list of char
+                            if (isListMappedToArray())
+                            {
+                                schemaBuilder.addField(newListField(colname, KdbTypes.list_of_list_of_char_type, Types.MinorType.VARCHAR, KdbTypes.list_of_char_type));
+                            }
+                            else
+                            {
+                                schemaBuilder.addField(newField(colname, Types.MinorType.VARCHAR, KdbTypes.list_of_list_of_char_type));
                             }
                             break;
                         default:

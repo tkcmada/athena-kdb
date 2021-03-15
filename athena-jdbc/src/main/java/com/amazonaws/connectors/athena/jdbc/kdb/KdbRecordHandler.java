@@ -284,6 +284,19 @@ LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
                                         }
                                     }
                                     break;
+                                case 'V': //list of string(list of list of char)
+                                    Object[] strings = (Object[]) value;
+                                    LOGGER.info(String.format("list at %s with constraints %s : %s ", rowNum, constraint, Arrays.toString(strings)));
+                                    for(int i = 0; i < strings.length; i++) {
+                                        //TODO should check constraints
+                                        if (strings[i] == null) {
+                                            // writer.writeNull();
+                                        }
+                                        else {
+                                            writeString(new String((char[])strings[i]), (ListVector) vector, writer);
+                                        }
+                                    }
+                                    break;
                                 default:
                                     throw new IllegalArgumentException("unsupported kdbtypechar " + kdbtypechar);
                             }

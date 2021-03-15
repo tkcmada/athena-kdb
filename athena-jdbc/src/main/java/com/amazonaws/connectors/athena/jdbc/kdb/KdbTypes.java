@@ -33,6 +33,7 @@ public enum KdbTypes
     list_of_float_type('F'),
     list_of_symbol_type('S'),
     list_of_timestamp_type('P'),
+    list_of_list_of_char_type('V'),
     real_type('r'),
     float_type('f'),
     date_type('d'),
