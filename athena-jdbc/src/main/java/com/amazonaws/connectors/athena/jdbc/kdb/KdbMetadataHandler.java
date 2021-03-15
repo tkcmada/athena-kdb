@@ -506,13 +506,13 @@ public class KdbMetadataHandler
         }
     };
 
-    private static final ThreadLocal<Pattern> athenaTableNamePattern = new ThreadLocal<Pattern>() {
-        @Override
-        public Pattern initialValue()
-        {
-            return Pattern.compile("_([a-z])");
-        }
-    };
+    // private static final ThreadLocal<Pattern> athenaTableNamePattern = new ThreadLocal<Pattern>() {
+    //     @Override
+    //     public Pattern initialValue()
+    //     {
+    //         return Pattern.compile("_([a-z])");
+    //     }
+    // };
 
     private static final ThreadLocal<Pattern> kdbTableNamePattern = new ThreadLocal<Pattern>() {
         @Override
@@ -536,7 +536,8 @@ public class KdbMetadataHandler
             return kdbTableName;
         //if table mapping doesn't exist, just apply naming rule.
         String s = to_upper_case(athenaTableName, athenaTableNamePattern2.get());
-        return to_upper_case(s, athenaTableNamePattern.get());
+        //return to_upper_case(s, athenaTableNamePattern.get());
+        return s;
     }
 
     static private String to_upper_case(String src, Pattern pattern)

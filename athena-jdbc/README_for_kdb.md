@@ -49,6 +49,8 @@ meta MarketBooksNoNull
 MarketBooksNoNull
 
 t5:([] name:`USDJPY`EURUSD; s:("AAA"; "BBB"); s1:(("CCC"; "DDD"); ("AAA"; "BBB")) )
+
+t6:([] name_group:`USDJPY`EURUSD )
 ```
 
 How to specify JDBC Connection String ?
