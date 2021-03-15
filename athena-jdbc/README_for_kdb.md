@@ -48,7 +48,7 @@ MarketBooksNoNull: ([] universal_id:( (1?0Ng)[0]; (1?0Ng)[0] ); sym:`USDJPY`USDJ
 meta MarketBooksNoNull
 MarketBooksNoNull
 
-t5:([] name:`USDJPY`EURUSD; s:("AAA"; "BBB"); s1:(("CCC"; "DDD"); ("AAA"; "BBB")) )
+t5:([] name:`USDJPY`EURUSD; str:("AAA"; "BBB"); liststr:(enlist "CCC"; ("AAA"; "BBB")) )
 
 t6:([] name_group:`USDJPY`EURUSD )
 ```
