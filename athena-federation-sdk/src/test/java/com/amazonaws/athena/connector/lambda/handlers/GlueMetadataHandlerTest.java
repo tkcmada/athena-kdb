@@ -24,7 +24,6 @@ import com.amazonaws.athena.connector.lambda.QueryStatusChecker;
 import com.amazonaws.athena.connector.lambda.data.BlockAllocator;
 import com.amazonaws.athena.connector.lambda.data.BlockAllocatorImpl;
 import com.amazonaws.athena.connector.lambda.data.BlockWriter;
-import com.amazonaws.athena.connector.lambda.data.FieldBuilder;
 import com.amazonaws.athena.connector.lambda.data.SchemaBuilder;
 import com.amazonaws.athena.connector.lambda.domain.TableName;
 import com.amazonaws.athena.connector.lambda.metadata.GetSplitsRequest;
@@ -52,7 +51,6 @@ import com.amazonaws.services.glue.model.StorageDescriptor;
 import com.amazonaws.services.glue.model.Table;
 import com.amazonaws.services.secretsmanager.AWSSecretsManager;
 import org.apache.arrow.vector.types.Types;
-import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.junit.After;
 import org.junit.Before;
@@ -139,21 +137,6 @@ public class GlueMetadataHandlerTest
             public GetSplitsResponse doGetSplits(BlockAllocator blockAllocator, GetSplitsRequest request)
             {
                 throw new UnsupportedOperationException();
-            }
-
-            @Override
-            protected Field convertField(String name, String type)
-            {
-                if ("int".equals(type)) {
-                    return FieldBuilder.newBuilder(name, Types.MinorType.INT.getType()).build();
-                }
-                else if ("bigint".equals(type)) {
-                    return FieldBuilder.newBuilder(name, Types.MinorType.BIGINT.getType()).build();
-                }
-                else if ("string".equals(type)) {
-                    return FieldBuilder.newBuilder(name, Types.MinorType.VARCHAR.getType()).build();
-                }
-                throw new IllegalArgumentException("Unsupported type " + type);
             }
         };
         allocator = new BlockAllocatorImpl();
@@ -258,6 +241,10 @@ public class GlueMetadataHandlerTest
         columns.add(new Column().withName("col1").withType("int").withComment("comment"));
         columns.add(new Column().withName("col2").withType("bigint").withComment("comment"));
         columns.add(new Column().withName("col3").withType("string").withComment("comment"));
+        columns.add(new Column().withName("col4").withType("timestamp").withComment("comment"));
+        columns.add(new Column().withName("col5").withType("date").withComment("comment"));
+        columns.add(new Column().withName("col6").withType("timestamptz").withComment("comment"));
+        columns.add(new Column().withName("col7").withType("timestamptz").withComment("comment"));
 
         Table mockTable = mock(Table.class);
         StorageDescriptor mockSd = mock(StorageDescriptor.class);
@@ -287,7 +274,7 @@ public class GlueMetadataHandlerTest
 
         logger.info("doGetTable - {}", res);
 
-        assertTrue(res.getSchema().getFields().size() == 3);
+        assertTrue(res.getSchema().getFields().size() == 7);
         assertTrue(res.getSchema().getCustomMetadata().size() > 0);
         assertTrue(res.getSchema().getCustomMetadata().containsKey(DATETIME_FORMAT_MAPPING_PROPERTY));
         assertEquals(res.getSchema().getCustomMetadata().get(DATETIME_FORMAT_MAPPING_PROPERTY_NORMALIZED), "Col2=someformat2,col1=someformat1");
@@ -296,6 +283,20 @@ public class GlueMetadataHandlerTest
         //Verify column name mapping works
         assertNotNull(res.getSchema().findField("col1"));
         assertNotNull(res.getSchema().findField("Col2"));
+        assertNotNull(res.getSchema().findField("Col3"));
+        assertNotNull(res.getSchema().findField("Col4"));
+        assertNotNull(res.getSchema().findField("col5"));
+        assertNotNull(res.getSchema().findField("col6"));
+        assertNotNull(res.getSchema().findField("col7"));
+
+        //Verify types
+        assertTrue(Types.getMinorTypeForArrowType(res.getSchema().findField("col1").getType()).equals(Types.MinorType.INT));
+        assertTrue(Types.getMinorTypeForArrowType(res.getSchema().findField("Col2").getType()).equals(Types.MinorType.BIGINT));
+        assertTrue(Types.getMinorTypeForArrowType(res.getSchema().findField("Col3").getType()).equals(Types.MinorType.VARCHAR));
+        assertTrue(Types.getMinorTypeForArrowType(res.getSchema().findField("Col4").getType()).equals(Types.MinorType.DATEMILLI));
+        assertTrue(Types.getMinorTypeForArrowType(res.getSchema().findField("col5").getType()).equals(Types.MinorType.DATEDAY));
+        assertTrue(Types.getMinorTypeForArrowType(res.getSchema().findField("col6").getType()).equals(Types.MinorType.TIMESTAMPMILLITZ));
+        assertTrue(Types.getMinorTypeForArrowType(res.getSchema().findField("col7").getType()).equals(Types.MinorType.TIMESTAMPMILLITZ));
     }
 
     @Test
@@ -307,5 +308,54 @@ public class GlueMetadataHandlerTest
         populateSourceTableNameIfAvailable(table, schemaBuilder);
         Schema schema = schemaBuilder.build();
         assertEquals("My-Table", getSourceTableName(schema));
+    }
+
+    @Test
+    public void doGetTableEmptyComment()
+            throws Exception
+    {
+        String sourceTable = "My-Table";
+
+        Map<String, String> expectedParams = new HashMap<>();
+        expectedParams.put(SOURCE_TABLE_PROPERTY, sourceTable);
+        // Put in a conflicting parameter
+        expectedParams.put("col1", "col1");
+
+        List<Column> columns = new ArrayList<>();
+        columns.add(new Column().withName("col1").withType("int").withComment(" "));
+
+        Table mockTable = mock(Table.class);
+        StorageDescriptor mockSd = mock(StorageDescriptor.class);
+
+        when(mockTable.getName()).thenReturn(table);
+        when(mockTable.getStorageDescriptor()).thenReturn(mockSd);
+        when(mockTable.getParameters()).thenReturn(expectedParams);
+        when(mockSd.getColumns()).thenReturn(columns);
+
+        when(mockGlue.getTable(any(com.amazonaws.services.glue.model.GetTableRequest.class)))
+                .thenAnswer((InvocationOnMock invocationOnMock) ->
+                {
+                    com.amazonaws.services.glue.model.GetTableRequest request =
+                            (com.amazonaws.services.glue.model.GetTableRequest) invocationOnMock.getArguments()[0];
+
+                    assertEquals(accountId, request.getCatalogId());
+                    assertEquals(schema, request.getDatabaseName());
+                    assertEquals(table, request.getName());
+
+                    GetTableResult mockResult = mock(GetTableResult.class);
+                    when(mockResult.getTable()).thenReturn(mockTable);
+                    return mockResult;
+                });
+
+        GetTableRequest req = new GetTableRequest(IdentityUtil.fakeIdentity(), queryId, catalog, new TableName(schema, table));
+        GetTableResponse res = handler.doGetTable(allocator, req);
+
+        logger.info("doGetTable - {}", res);
+
+        //Verify column name mapping works
+        assertNotNull(res.getSchema().findField("col1"));
+
+        //Verify types
+        assertTrue(Types.getMinorTypeForArrowType(res.getSchema().findField("col1").getType()).equals(Types.MinorType.INT));
     }
 }

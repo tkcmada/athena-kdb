@@ -24,14 +24,6 @@ import com.amazonaws.athena.connector.lambda.domain.predicate.ConstraintEvaluato
 import com.amazonaws.athena.connector.lambda.domain.predicate.Constraints;
 import com.amazonaws.athena.connector.lambda.domain.predicate.EquatableValueSet;
 import com.amazonaws.athena.connector.lambda.domain.predicate.ValueSet;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.auth.BasicSessionCredentials;
-import com.amazonaws.internal.StaticCredentialsProvider;
-import com.amazonaws.services.secretsmanager.AWSSecretsManager;
-import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder;
-import com.amazonaws.services.secretsmanager.model.GetSecretValueRequest;
-import com.amazonaws.services.secretsmanager.model.GetSecretValueResult;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import org.apache.arrow.vector.BigIntVector;
@@ -64,15 +56,12 @@ import org.apache.arrow.vector.types.Types;
 import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
-import org.apache.arrow.vector.util.Text;
 import org.apache.commons.codec.Charsets;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.activation.UnsupportedDataTypeException;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -84,9 +73,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -304,7 +290,7 @@ public class BlockTest
                     //no supported for unsetRow(...) this is a TODO to see if its possible some other way
                     break;
                 default:
-                    throw new UnsupportedDataTypeException(next.getType().getTypeID() + " is not supported");
+                    throw new UnsupportedOperationException(next.getType().getTypeID() + " is not supported");
             }
             actualFieldCount++;
         }
@@ -374,7 +360,7 @@ public class BlockTest
     }
 
     public static Block generateTestBlock(BlockAllocatorImpl expectedAllocator, Schema origSchema, int expectedRows)
-            throws UnsupportedDataTypeException
+            throws UnsupportedOperationException
     {
         /**
          * Generate and write the block
@@ -636,7 +622,7 @@ public class BlockTest
                     }
                     break;
                 default:
-                    throw new UnsupportedDataTypeException(vector.getMinorType() + " is not supported");
+                    throw new UnsupportedOperationException(vector.getMinorType() + " is not supported");
             }
             fieldCount++;
         }
@@ -684,13 +670,13 @@ public class BlockTest
                                 value.add(values);
                                 break;
                             default:
-                                throw new UnsupportedDataTypeException(vector.getMinorType() + " is not supported");
+                                throw new UnsupportedOperationException(vector.getMinorType() + " is not supported");
                         }
                         BlockUtils.setComplexValue((ListVector) vector, i, FieldResolver.DEFAULT, value);
                     }
                     break;
                 default:
-                    throw new UnsupportedDataTypeException(vector.getMinorType() + " is not supported");
+                    throw new UnsupportedOperationException(vector.getMinorType() + " is not supported");
             }
         }
         expectedBlock.setRowCount(expectedRows);
@@ -747,7 +733,7 @@ public class BlockTest
                     assertEquals("failed for " + vector.getField().getName(), actualBlock.getRowCount(), actual);
                     break;
                 default:
-                    throw new UnsupportedDataTypeException(next.getType().getTypeID() + " is not supported");
+                    throw new UnsupportedOperationException(next.getType().getTypeID() + " is not supported");
             }
             actualFieldCount++;
         }
@@ -797,13 +783,13 @@ public class BlockTest
                                 value.add(values);
                                 break;
                             default:
-                                throw new UnsupportedDataTypeException(vector.getMinorType() + " is not supported");
+                                throw new UnsupportedOperationException(vector.getMinorType() + " is not supported");
                         }
                         BlockUtils.setComplexValue((ListVector) vector, i, FieldResolver.DEFAULT, value);
                     }
                     break;
                 default:
-                    throw new UnsupportedDataTypeException(vector.getMinorType() + " is not supported");
+                    throw new UnsupportedOperationException(vector.getMinorType() + " is not supported");
             }
         }
         expectedBlock.setRowCount(expectedRows);
@@ -857,12 +843,122 @@ public class BlockTest
                     assertEquals("failed for " + vector.getField().getName(), actualBlock.getRowCount(), actual);
                     break;
                 default:
-                    throw new UnsupportedDataTypeException(next.getType().getTypeID() + " is not supported");
+                    throw new UnsupportedOperationException(next.getType().getTypeID() + " is not supported");
             }
             actualFieldCount++;
         }
 
         actualBlock.close();
+    }
+
+    @Test
+    public void structOfListsTest()
+            throws Exception
+    {
+        BlockAllocatorImpl expectedAllocator = new BlockAllocatorImpl();
+
+        /**
+         * Generate and write the schema
+         */
+        SchemaBuilder schemaBuilder = new SchemaBuilder();
+        schemaBuilder.addField(
+                FieldBuilder.newBuilder("innerStruct", Types.MinorType.STRUCT.getType())
+                        .addStringField("varchar")
+                        .addListField("list", Types.MinorType.VARCHAR.getType())
+                        .build());
+        Schema origSchema = schemaBuilder.build();
+
+        /**
+         * Generate and write the block
+         */
+        Block expectedBlock = expectedAllocator.createBlock(origSchema);
+
+        int expectedRows = 200;
+        for (Field next : origSchema.getFields()) {
+            ValueVector vector = expectedBlock.getFieldVector(next.getName());
+            for (int i = 0; i < expectedRows; i++) {
+                switch (vector.getMinorType()) {
+                    case STRUCT:
+                        Map<String, Object> value = new HashMap<>();
+                        value.put("varchar", "chars");
+                        if (i % 2 == 0) {
+                            List<String> listVal = new ArrayList<>();
+                            listVal.add("value_0_" + i);
+                            listVal.add("value_1_" + i);
+                            value.put("list", listVal);
+                        }
+                        else {
+                            value.put("list", null);
+                        }
+                        BlockUtils.setComplexValue((StructVector) vector, i, FieldResolver.DEFAULT, value);
+                        break;
+                    default:
+                        throw new UnsupportedOperationException(vector.getMinorType() + " is not supported");
+                }
+            }
+        }
+        expectedBlock.setRowCount(expectedRows);
+
+        RecordBatchSerDe expectSerDe = new RecordBatchSerDe(expectedAllocator);
+        ByteArrayOutputStream blockOut = new ByteArrayOutputStream();
+        ArrowRecordBatch expectedBatch = expectedBlock.getRecordBatch();
+        expectSerDe.serialize(expectedBatch, blockOut);
+
+        assertSerializationOverhead(blockOut);
+        expectedBatch.close();
+        expectedBlock.close();
+
+        ByteArrayOutputStream schemaOut = new ByteArrayOutputStream();
+        SchemaSerDe schemaSerDe = new SchemaSerDe();
+        schemaSerDe.serialize(origSchema, schemaOut);
+        Schema actualSchema = schemaSerDe.deserialize(new ByteArrayInputStream(schemaOut.toByteArray()));
+
+        BlockAllocatorImpl actualAllocator = new BlockAllocatorImpl();
+        RecordBatchSerDe actualSerDe = new RecordBatchSerDe(actualAllocator);
+        ArrowRecordBatch batch = actualSerDe.deserialize(blockOut.toByteArray());
+
+        /**
+         * Generate and write the block
+         */
+        Block actualBlock = actualAllocator.createBlock(actualSchema);
+        actualBlock.loadRecordBatch(batch);
+        batch.close();
+
+        for (int i = 0; i < actualBlock.getRowCount(); i++) {
+            logger.info("ListOfList: util {}", BlockUtils.rowToString(actualBlock, i));
+        }
+
+        assertEquals("Row count missmatch", expectedRows, actualBlock.getRowCount());
+        int actualListValues = 0;
+        int emptyListValues = 0;
+        for (Field next : actualBlock.getFields()) {
+            FieldReader vector = actualBlock.getFieldReader(next.getName());
+            for (int i = 0; i < actualBlock.getRowCount(); i++) {
+                switch (vector.getMinorType()) {
+                    case STRUCT:
+                        vector.setPosition(i);
+                        assertEquals("chars", vector.reader("varchar").readText().toString());
+                        FieldReader listReader = vector.reader("list");
+                        int found = 0;
+                        while (listReader.next()) {
+                            assertEquals("value_" + found + "_" + i, listReader.reader().readText().toString());
+                            found++;
+                            actualListValues++;
+                        }
+                        if (found == 0) {
+                            emptyListValues++;
+                        }
+                        break;
+                    default:
+                        throw new UnsupportedOperationException(next.getType().getTypeID() + " is not supported");
+                }
+            }
+        }
+
+        actualBlock.close();
+        assertEquals(200, actualListValues);
+        assertEquals(100, emptyListValues);
+        logger.info("structOfListsTest: actualListValues[{}] emptyListValues[{}]", actualListValues, emptyListValues);
     }
 
     /**
@@ -872,7 +968,7 @@ public class BlockTest
      * layer is currently being refactored and eventually this assertion will not be needed.
      *
      * @param serializedBlock The bytes of the block to serialize.
-     * @see https://github.com/awslabs/aws-athena-query-federation/issues/121
+     * @note https://github.com/awslabs/aws-athena-query-federation/issues/121
      */
     private void assertSerializationOverhead(ByteArrayOutputStream serializedBlock)
     {

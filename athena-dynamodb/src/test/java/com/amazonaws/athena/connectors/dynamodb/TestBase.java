@@ -21,7 +21,7 @@ package com.amazonaws.athena.connectors.dynamodb;
 
 import com.amazonaws.athena.connector.lambda.ThrottlingInvoker;
 import com.amazonaws.athena.connector.lambda.domain.TableName;
-import com.amazonaws.athena.connector.lambda.handlers.GlueMetadataHandler;
+
 import com.amazonaws.athena.connector.lambda.security.FederatedIdentity;
 import com.amazonaws.athena.connectors.dynamodb.util.DDBTableUtils;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
@@ -50,6 +50,7 @@ import org.junit.BeforeClass;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -60,7 +61,7 @@ import static com.amazonaws.services.dynamodbv2.document.ItemUtils.toItem;
 
 public class TestBase
 {
-    protected FederatedIdentity TEST_IDENTITY = new FederatedIdentity("id", "principal", "account");
+    protected FederatedIdentity TEST_IDENTITY = new FederatedIdentity("arn", "account", Collections.emptyMap(), Collections.emptyList());
     protected static final String TEST_QUERY_ID = "queryId";
     protected static final String TEST_CATALOG_NAME = "default";
     protected static final String TEST_TABLE = "test_table";
@@ -135,6 +136,8 @@ public class TestBase
             item.put("col_8", toAttributeValue(ImmutableList.of(ImmutableMap.of("mostlyEmptyMap",
                     i % 128 == 0 ? ImmutableMap.of("subtractions", ImmutableSet.of(i - 100, i - 200)) : ImmutableMap.of()))));
             item.put("col_9", toAttributeValue(100.0f + i));
+            item.put("col_10", toAttributeValue(ImmutableList.of(ImmutableList.of(1 * i, 2 * i, 3 * i),
+                    ImmutableList.of(4 * i, 5 * i), ImmutableList.of(6 * i, 7 * i, 8 * i))));
             tableWriteItems.addItemToPut(toItem(item));
 
             if (tableWriteItems.getItemsToPut().size() == 25) {
@@ -190,6 +193,11 @@ public class TestBase
         item.put("Col2", toAttributeValue("2020-02-27T09:12:27Z"));
         item.put("Col3", toAttributeValue("27/02/2020"));
         item.put("Col4", toAttributeValue("2020-02-27"));
+        // below three columns are testing timestamp with timezone
+        // col5 with non-utc timezone, col6 with utc timezone, and c7 without timezone that will fall back to   default
+        item.put("Col5", toAttributeValue("2015-12-21T17:42:34-05:00"));
+        item.put("Col6", toAttributeValue("2015-12-21T17:42:34Z"));
+        item.put("Col7", toAttributeValue("2015-12-21T17:42:34"));
         tableWriteItems.addItemToPut(toItem(item));
         ddb.batchWriteItem(tableWriteItems);
 

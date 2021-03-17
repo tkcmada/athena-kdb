@@ -2,7 +2,7 @@
 
 This connector enables Amazon Athena to communicate with DynamoDB, making your tables accessible via SQL. 
 
-**To enable this Preview feature you need to create an Athena workgroup named AmazonAthenaPreviewFunctionality and run any queries attempting to federate to this connector, use a UDF, or SageMaker inference from that workgroup.**
+**Athena Federated Queries are now enabled as GA in us-east-1, us-east-2, us-west-2, eu-west-1, ap-northeast-1, ap-south-1, us-west-1, ap-southeast-1, ap-southeast-2, eu-west-2, ap-northeast-2, eu-west-3, ca-central-1, sa-east-1, and eu-central-1. To use this feature, upgrade your engine version to Athena V2 in your workgroup settings. Check documentation here for more details: https://docs.aws.amazon.com/athena/latest/ug/engine-versions.html.**
 
 ## Usage
 
@@ -37,7 +37,8 @@ and is useful for filtering out irrelevant databases in accounts that have lots 
 your DynamoDB table (e.g. capital letters are not permitted in Glue table names but are permitted in DynamoDB table names).
 4. **columnMapping** - Optional table property/parameter that define column name mappings.  Use this if Glue column naming rules prevent you from creating a Glue table with the same column names as
 your DynamoDB table (e.g. capital letters are not permitted in Glue column names but are permitted in DynamoDB column names).  This is expected to be in the format `col1=Col1,col2=Col2`.
-5. **datetimeFormatMapping** - Optional table property/parameter that defines the date/datetime format to be used to parse the raw DynamoDB string in a particular column that is of Glue type `date` or `timestamp`. If not provided, the format will inferred using [various ISO-8601 format](https://commons.apache.org/proper/commons-lang/apidocs/org/apache/commons/lang3/time/DateFormatUtils.html). If the date/datetime format cannot be inferred or if the raw string fails to parse, then the value will be omitted from the result. The mapping is expected to be in the format `col1=someformat1,col2=someformat2`. Some examples of the date/datetime formats are `yyyyMMdd'T'HHmmss`, `ddMMyyyy'T'HH:mm:ss`.
+5. **defaultTimeZone** - Optional table property/parameter for timezone that will be applied to date/datetime values without explicit timezone. To avoid any discrepancy between the data source default timezone and athena's session timezone, it is good practice to set this value.
+6. **datetimeFormatMapping** - Optional table property/parameter that defines the date/datetime format to be used to parse the raw DynamoDB string in a particular column that is of Glue type `date` or `timestamp`. If not provided, the format will inferred using [various ISO-8601 format](https://commons.apache.org/proper/commons-lang/apidocs/org/apache/commons/lang3/time/DateFormatUtils.html). If the date/datetime format cannot be inferred or if the raw string fails to parse, then the value will be omitted from the result. The mapping is expected to be in the format `col1=someformat1,col2=someformat2`. Some examples of the date/datetime formats are `yyyyMMdd'T'HHmmss`, `ddMMyyyy'T'HH:mm:ss`. If your column is of date/datetime value without timezone, and you wish to use the column in the `WHERE` clause, you need to set this optional property for that column.
 
 
 ### Required Permissions

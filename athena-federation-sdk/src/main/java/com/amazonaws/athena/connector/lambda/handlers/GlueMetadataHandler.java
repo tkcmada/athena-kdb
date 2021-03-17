@@ -114,7 +114,7 @@ public abstract class GlueMetadataHandler
     public static final String DATETIME_FORMAT_MAPPING_PROPERTY = "datetimeFormatMapping";
     // Table property (optional) that we will create from DATETIME_FORMAT_MAPPING_PROPERTY with normalized column names
     public static final String DATETIME_FORMAT_MAPPING_PROPERTY_NORMALIZED = "datetimeFormatMappingNormalized";
-
+    public static final String VIEW_METADATA_FIELD = "_view_template";
     private final AWSGlue awsGlue;
 
     /**
@@ -353,18 +353,27 @@ public abstract class GlueMetadataHandler
         }
 
         for (Column next : table.getStorageDescriptor().getColumns()) {
-            String mappedColumnName = columnNameMapping.getOrDefault(next.getName(), next.getName());
+            String rawColumnName = next.getName();
+            String mappedColumnName = columnNameMapping.getOrDefault(rawColumnName, rawColumnName);
+            // apply any type override provided in typeOverrideMapping from metadata
+            // this is currently only used for timestamp with timezone support
+            logger.info("Column {} with registered type {}", rawColumnName, next.getType());
             schemaBuilder.addField(convertField(mappedColumnName, next.getType()));
-            if (next.getComment() != null) {
+            // Add non-null non-empty comments to metadata
+            if (next.getComment() != null && !next.getComment().trim().isEmpty()) {
                 schemaBuilder.addMetadata(mappedColumnName, next.getComment());
             }
-            if (dateTimeFormatMapping.containsKey(next.getName())) {
-                datetimeFormatMappingWithColumnName.put(mappedColumnName, dateTimeFormatMapping.get(next.getName()));
+            if (dateTimeFormatMapping.containsKey(rawColumnName)) {
+                datetimeFormatMappingWithColumnName.put(mappedColumnName, dateTimeFormatMapping.get(rawColumnName));
             }
         }
         populateDatetimeFormatMappingIfAvailable(schemaBuilder, datetimeFormatMappingWithColumnName);
 
         populateSourceTableNameIfAvailable(table, schemaBuilder);
+
+        if (table.getViewOriginalText() != null && !table.getViewOriginalText().isEmpty()) {
+            schemaBuilder.addMetadata(VIEW_METADATA_FIELD, table.getViewOriginalText());
+        }
 
         return new GetTableResponse(request.getCatalogName(),
                 request.getTableName(),
@@ -382,7 +391,12 @@ public abstract class GlueMetadataHandler
      */
     protected Field convertField(String name, String glueType)
     {
-        return GlueFieldLexer.lex(name, glueType);
+        try {
+            return GlueFieldLexer.lex(name, glueType);
+        }
+        catch (RuntimeException ex) {
+            throw new RuntimeException("Error converting field[" + name + "] with type[" + glueType + "]", ex);
+        }
     }
 
     public interface TableFilter
@@ -469,7 +483,7 @@ public abstract class GlueMetadataHandler
      *
      * @param table The glue table
      * @returns a map of column name to date/datetime format that is used to parse the values in table
-     *          if provided, otherwise an empty map
+     * if provided, otherwise an empty map
      */
     private Map<String, String> getDateTimeFormatMapping(Table table)
     {
@@ -487,7 +501,7 @@ public abstract class GlueMetadataHandler
      * @param dateTimeFormatMapping map of normalized column names to date/datetime format, if provided
      */
     private void populateDatetimeFormatMappingIfAvailable(SchemaBuilder schemaBuilder,
-                                                          Map<String, String> dateTimeFormatMapping)
+            Map<String, String> dateTimeFormatMapping)
     {
         if (dateTimeFormatMapping.size() > 0) {
             String datetimeFormatMappingString = dateTimeFormatMapping.entrySet().stream()

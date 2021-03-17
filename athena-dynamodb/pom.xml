@@ -13,14 +13,20 @@
 
     <properties>
         <slf4jVersion>1.7.30</slf4jVersion>
-        <log4j2Version>2.13.0</log4j2Version>
+        <log4j2Version>2.13.3</log4j2Version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-athena-federation-sdk</artifactId>
-            <version>${aws-athena-federation-sdk.version}</version>
+            <version>2021.6.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>athena-federation-integ-test</artifactId>
+            <version>2021.6.1</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
@@ -79,6 +85,13 @@
             <artifactId>log4j-api</artifactId>
             <version>${log4j2Version}</version>
             <scope>runtime</scope>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/software.amazon.awscdk/dynamodb -->
+        <dependency>
+            <groupId>software.amazon.awscdk</groupId>
+            <artifactId>dynamodb</artifactId>
+            <version>${aws-cdk.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
