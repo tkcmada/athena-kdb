@@ -101,7 +101,7 @@ public class KdbRecordHandlerTest
         schemaBuilder.addField(KdbMetadataHandler.newField("testCol6", Types.MinorType.TINYINT, KdbTypes.byte_type));
         schemaBuilder.addField(KdbMetadataHandler.newField("testCol7", Types.MinorType.FLOAT8, KdbTypes.float_type));
         schemaBuilder.addField(KdbMetadataHandler.newField("testCol8", Types.MinorType.BIT, KdbTypes.bit_type));
-        schemaBuilder.addField(KdbMetadataHandler.newField("testCol9", Types.MinorType.DATEDAY, KdbTypes.date_type));
+        schemaBuilder.addField(KdbMetadataHandler.newField("date"     , Types.MinorType.DATEDAY, KdbTypes.date_type));
         schemaBuilder.addField(KdbMetadataHandler.newField("z"        , Types.MinorType.VARCHAR, KdbTypes.timestamp_type));
         schemaBuilder.addField(KdbMetadataHandler.newField("g"        , Types.MinorType.VARCHAR, KdbTypes.guid_type));
         schemaBuilder.addField(KdbMetadataHandler.newField("str"      , Types.MinorType.VARCHAR, KdbTypes.list_of_char_type));
@@ -270,14 +270,27 @@ public class KdbRecordHandlerTest
     }
 
     @Test
+    public void pushdown()
+    {
+        Assert.assertEquals("myfunc[2021.01.03;2021.01.03]", KdbQueryStringBuilder.pushDownDateCriteriaIntoFuncArgs("myfunc[2021.01.01;2021.01.01]", getSingleValueSet(new LocalDateTime(2021, 1, 3, 0, 0, 0, 0))));
+        Assert.assertEquals("myfunc[2021.01.03;2021.01.10]", KdbQueryStringBuilder.pushDownDateCriteriaIntoFuncArgs("myfunc[2021.01.01;2021.01.01]"        , getRangeSet(Marker.Bound.EXACTLY, new LocalDateTime(2021, 1, 3, 0, 0, 0, 0), Marker.Bound.EXACTLY, new LocalDateTime(2021, 1, 10, 0, 0, 0, 0))));
+        Assert.assertEquals("myfunc[(2021.01.03)+1;(2021.01.10)-1]", KdbQueryStringBuilder.pushDownDateCriteriaIntoFuncArgs("myfunc[2021.01.01;2021.01.01]", getRangeSet(Marker.Bound.ABOVE  , new LocalDateTime(2021, 1, 3, 0, 0, 0, 0), Marker.Bound.BELOW  , new LocalDateTime(2021, 1, 10, 0, 0, 0, 0))));
+        
+        Assert.assertEquals("myfunc[2021.01.03;2021.01.03;USDJPY]", KdbQueryStringBuilder.pushDownDateCriteriaIntoFuncArgs("myfunc[2021.01.01;2021.01.01;USDJPY]", getSingleValueSet(new LocalDateTime(2021, 1, 3, 0, 0, 0, 0))));
+        Assert.assertEquals("myfunc[2021.01.03;2021.01.10;USDJPY]", KdbQueryStringBuilder.pushDownDateCriteriaIntoFuncArgs("myfunc[2021.01.01;2021.01.01;USDJPY]"        , getRangeSet(Marker.Bound.EXACTLY, new LocalDateTime(2021, 1, 3, 0, 0, 0, 0), Marker.Bound.EXACTLY, new LocalDateTime(2021, 1, 10, 0, 0, 0, 0))));
+        Assert.assertEquals("myfunc[(2021.01.03)+1;(2021.01.10)-1;USDJPY]", KdbQueryStringBuilder.pushDownDateCriteriaIntoFuncArgs("myfunc[2021.01.01;2021.01.01;USDJPY]", getRangeSet(Marker.Bound.ABOVE  , new LocalDateTime(2021, 1, 3, 0, 0, 0, 0), Marker.Bound.BELOW  , new LocalDateTime(2021, 1, 10, 0, 0, 0, 0))));
+
+    }
+
+    @Test
     public void buildSplitSql()
             throws SQLException
     {
         LOGGER.info("buildSplitSql starting");
 
         Split split = Mockito.mock(Split.class);
-        Mockito.when(split.getProperties()).thenReturn(Collections.singletonMap("partition_name", "p0"));
-        Mockito.when(split.getProperty(Mockito.eq("partition_name"))).thenReturn("p0");
+        Mockito.when(split.getProperties()).thenReturn(Collections.singletonMap("partition_name", "2021.01.02"));
+        Mockito.when(split.getProperty(Mockito.eq("partition_name"))).thenReturn("2021.01.02");
 
         Range range1a = Mockito.mock(Range.class, Mockito.RETURNS_DEEP_STUBS);
         Mockito.when(range1a.isSingleValue()).thenReturn(true);
@@ -313,7 +326,7 @@ public class KdbRecordHandlerTest
                 .put("testCol6", valueSet6)
                 .put("testCol7", valueSet7)
                 .put("testCol8", valueSet8)
-                .put("testCol9", valueSet9)
+                .put("date", valueSet9)
                 .put("z"        , valueSet10)
                 .put("g"        , valueSet11)
                 .put("str"      , valueSet_str)
@@ -322,7 +335,7 @@ public class KdbRecordHandlerTest
                 .put("ts"       , valueSet_ts)
                 .build());
 
-        String expectedSql = "q) select testCol1, testCol2, testCol3, r, testCol5, testCol6, testCol7, testCol8, testCol9, z, g, str, c, t, ts from testTable PARTITION(p0)  where (testCol1 in (1i, 2i)) , (testCol2 = `abc) , ((testCol3 > 2) and (testCol3 <= 20)) , (r = 1.5e) , (testCol5 = 1i) , (testCol6 = 0i) , (testCol7 = 1.2) , (testCol8 = 1b) , (testCol9 = 2020.01.01) , (z = 2020.01.01D02:03:04.005006007) , (g = \"G\"$\"1234-5678\") , (c = \"w\") , (t = 03:03:04.005) , (ts = 04:03:04.005006007)";
+        String expectedSql = "q) select testCol1, testCol2, testCol3, r, testCol5, testCol6, testCol7, testCol8, date, z, g, str, c, t, ts from testTable  where (testCol1 in (1i, 2i)) , (testCol2 = `abc) , ((testCol3 > 2) and (testCol3 <= 20)) , (r = 1.5e) , (testCol5 = 1i) , (testCol6 = 0i) , (testCol7 = 1.2) , (testCol8 = 1b) , (date = 2020.01.01) , (z = 2020.01.01D02:03:04.005006007) , (g = \"G\"$\"1234-5678\") , (c = \"w\") , (t = 03:03:04.005) , (ts = 04:03:04.005006007)";
         PreparedStatement expectedPreparedStatement = Mockito.mock(PreparedStatement.class);
         Mockito.when(this.connection.prepareStatement(Mockito.eq(expectedSql))).thenReturn(expectedPreparedStatement);
 
@@ -338,8 +351,8 @@ public class KdbRecordHandlerTest
         LOGGER.info("buildSplitSql_null starting");
 
         Split split = Mockito.mock(Split.class);
-        Mockito.when(split.getProperties()).thenReturn(Collections.singletonMap("partition_name", "p0"));
-        Mockito.when(split.getProperty(Mockito.eq("partition_name"))).thenReturn("p0");
+        Mockito.when(split.getProperties()).thenReturn(Collections.singletonMap("partition_name", "2021.01.02"));
+        Mockito.when(split.getProperty(Mockito.eq("partition_name"))).thenReturn("2021.01.02");
 
         ValueSet valueSet1 = getSingleValueSetOnlyNull();
         ValueSet valueSet2 = getSingleValueSetOnlyNull();
@@ -367,7 +380,7 @@ public class KdbRecordHandlerTest
                 .put("testCol6", valueSet6)
                 .put("testCol7", valueSet7)
                 .put("testCol8", valueSet8)
-                .put("testCol9", valueSet9)
+                .put("date", valueSet9)
                 .put("z", valueSet10)
                 .put("g"        , valueSet11)
                 .put("str"      , valueSet_str)
@@ -376,7 +389,7 @@ public class KdbRecordHandlerTest
                 .put("ts"       , valueSet_ts)
                 .build());
 
-        String expectedSql = "q) select testCol1, testCol2, testCol3, r, testCol5, testCol6, testCol7, testCol8, testCol9, z, g, str, c, t, ts from testTable PARTITION(p0)  where (testCol1 = 0Ni) , (testCol2 = ` ) , (testCol3 = 0Nj) , (r = 0Ne) , (testCol5 = 0Nh) , (testCol6 = 0x00) , (testCol7 = 0n) , (testCol8 = 0b) , (testCol9 = 0Nd) , (z = 0Np) , (g = 0Ng) , (c = \" \") , (t = 0Nt) , (ts = 0Nn)";
+        String expectedSql = "q) select testCol1, testCol2, testCol3, r, testCol5, testCol6, testCol7, testCol8, date, z, g, str, c, t, ts from testTable  where (testCol1 = 0Ni) , (testCol2 = ` ) , (testCol3 = 0Nj) , (r = 0Ne) , (testCol5 = 0Nh) , (testCol6 = 0x00) , (testCol7 = 0n) , (testCol8 = 0b) , (date = 0Nd) , (z = 0Np) , (g = 0Ng) , (c = \" \") , (t = 0Nt) , (ts = 0Nn)";
         PreparedStatement expectedPreparedStatement = Mockito.mock(PreparedStatement.class);
         Mockito.when(this.connection.prepareStatement(Mockito.eq(expectedSql))).thenReturn(expectedPreparedStatement);
 
@@ -384,7 +397,6 @@ public class KdbRecordHandlerTest
 
         Assert.assertEquals(expectedPreparedStatement, preparedStatement);
     }
-
 
     static private ValueSet getSingleValueSet(Object value) {
         Range range = Mockito.mock(Range.class, Mockito.RETURNS_DEEP_STUBS);

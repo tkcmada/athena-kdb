@@ -31,6 +31,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.arrow.vector.types.Types;
+import org.apache.arrow.vector.types.Types.MinorType;
 import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
@@ -135,12 +136,22 @@ public class KdbQueryStringBuilder
             sql.append("null");
         }
 
-        sql.append(getFromClauseWithSplit(catalog, schema, table, split));
-
         List<TypeAndValue> accumulator = new ArrayList<>();
 
-        List<String> clauses = toConjuncts(tableSchema.getFields(), constraints, accumulator, split.getProperties());
+        List<String> clauses = new ArrayList<>();
         clauses.addAll(getPartitionWhereClauses(split));
+        clauses.addAll(toConjuncts(tableSchema.getFields(), constraints, accumulator, split.getProperties()));
+
+        String kdbTableName = KdbMetadataHandler.athenaTableNameToKdbTableName(table);
+        //push down date criteria
+        if (constraints.getSummary() != null && !constraints.getSummary().isEmpty()) {
+            ValueSet valueSet = constraints.getSummary().get("date");
+            if (valueSet != null) {
+                kdbTableName = pushDownDateCriteriaIntoFuncArgs(kdbTableName, valueSet);
+            }
+        }
+        sql.append(" from " + quote(kdbTableName) + " ");
+
         if (!clauses.isEmpty()) {
             sql.append(" where ")
                     .append(Joiner.on(" , ").join(clauses));
@@ -150,33 +161,109 @@ public class KdbQueryStringBuilder
 
         return sql.toString();
     }
+    
+    static public String pushDownDateCriteriaIntoFuncArgs(String kdbTableName, ValueSet valueSet)
+    {
+        if(kdbTableName.indexOf('[') <= 0)
+            return kdbTableName; //no push down as kdbTableName looks not function
+            
+        if(valueSet == null)
+            return kdbTableName; //no push down
+        
+        if(valueSet.isNullAllowed())
+            return kdbTableName; //no push down
+
+        if (! (valueSet instanceof SortedRangeSet))
+            return kdbTableName; //no push down
+
+        String date_from = null;
+        String date_to   = null;
+            
+        Range rangeSpan = ((SortedRangeSet) valueSet).getSpan();
+        if (rangeSpan.getLow().isLowerUnbounded() && rangeSpan.getHigh().isUpperUnbounded())
+            return kdbTableName; //no push down
+
+        for (Range range : valueSet.getRanges().getOrderedRanges()) {
+            if(date_from != null || date_to != null) {
+                //there is already another condition. Multiple criteria cannot be pushed down.
+                return kdbTableName; //no push down
+            }
+            if (range.isSingleValue()) {
+                date_from = KdbQueryStringBuilder.toLiteral(range.getLow().getValue(), MinorType.DATEDAY, null);
+                date_to   = KdbQueryStringBuilder.toLiteral(range.getLow().getValue(), MinorType.DATEDAY, null);
+            }
+            else {
+                List<String> rangeConjuncts = new ArrayList<>();
+                if (!range.getLow().isLowerUnbounded()) {
+                    switch (range.getLow().getBound()) {
+                        case ABOVE: // >
+                            date_from = "(" + KdbQueryStringBuilder.toLiteral(range.getLow().getValue(), MinorType.DATEDAY, null) + ")+1";
+                            break;
+                        case EXACTLY: //>=
+                            date_from = KdbQueryStringBuilder.toLiteral(range.getLow().getValue(), MinorType.DATEDAY, null);
+                            break;
+                        case BELOW:
+                            throw new IllegalArgumentException("Low marker should never use BELOW bound");
+                        default:
+                            throw new AssertionError("Unhandled bound: " + range.getLow().getBound());
+                    }
+                }
+                if (!range.getHigh().isUpperUnbounded()) {
+                    switch (range.getHigh().getBound()) {
+                        case ABOVE:
+                            throw new IllegalArgumentException("High marker should never use ABOVE bound");
+                        case EXACTLY:
+                            date_to = KdbQueryStringBuilder.toLiteral(range.getHigh().getValue(), MinorType.DATEDAY, null);
+                            break;
+                        case BELOW:
+                            date_to = "(" + KdbQueryStringBuilder.toLiteral(range.getHigh().getValue(), MinorType.DATEDAY, null) + ")-1";
+                            break;
+                        default:
+                            throw new AssertionError("Unhandled bound: " + range.getHigh().getBound());
+                    }
+                }
+            }
+
+            if(date_from != null && date_to != null) {
+                //First two arguments of function look date type and date_from and date_to are given.
+                kdbTableName = kdbTableName.replaceFirst( "\\[ *[0-9][0-9][0-9][0-9]\\.[0-9][0-9]\\.[0-9][0-9] *; *[0-9][0-9][0-9][0-9]\\.[0-9][0-9]\\.[0-9][0-9] *", "[" + date_from + ";" + date_to);
+            }
+            //not supported
+            // else if(date_from != null) {
+            //     //First one argument  of function look date type and date_from.
+            //     if(kdbTableName.matches(".*\\[ *[0-9][0-9][0-9][0-9]\\.[0-9][0-9]\\.[0-9][0-9] *; *[0-9][0-9][0-9][0-9]\\.[0-9][0-9]\\.[0-9][0-9].*")) {
+            //         //if funciton has two dates arguments, we should skip it.
+            //         //TESTED by test_select_stmt_func_subquery_where_pushdown5_only_from_clause
+            //     }
+            //     else {
+            //         kdbTableName = kdbTableName.replaceFirst( "\\[ *[0-9][0-9][0-9][0-9]\\.[0-9][0-9]\\.[0-9][0-9] *", "[" + date_from);
+            //     }
+            // }
+        }
+
+
+        return kdbTableName;
+    }
 
     @Override
     protected String getFromClauseWithSplit(String catalog, String schema, String athenaTableName, Split split)
     {
-        StringBuilder tableName = new StringBuilder();
-        // if (!Strings.isNullOrEmpty(catalog)) {
-        //     tableName.append(quote(catalog)).append('.');
-        // }
-        // if (!Strings.isNullOrEmpty(schema)) {
-        //     tableName.append(quote(schema)).append('.');
-        // }
-        tableName.append(quote(KdbMetadataHandler.athenaTableNameToKdbTableName(athenaTableName)));
-
-        String partitionName = split.getProperty(KdbMetadataHandler.BLOCK_PARTITION_COLUMN_NAME);
-
-        if (KdbMetadataHandler.ALL_PARTITIONS.equals(partitionName)) {
-            // No partitions
-            return String.format(" from %s ", tableName);
-        }
-
-        return String.format(" from %s PARTITION(%s) ", tableName, partitionName);
+        throw new RuntimeException("getFromClauseWithSplit is not used in kdb+");
     }
 
     @Override
     protected List<String> getPartitionWhereClauses(final Split split)
     {
-        return Collections.emptyList();
+        String partitionName = split.getProperty(KdbMetadataHandler.BLOCK_PARTITION_COLUMN_NAME);
+
+        if (KdbMetadataHandler.ALL_PARTITIONS.equals(partitionName)) {
+            return Collections.emptyList();
+        }
+
+        List<String> clauses = new ArrayList<>();
+//not supported for now
+//        clauses.add("(date = " + partitionName + ")");
+        return clauses;
     }
 
     private static final ThreadLocal<DateTimeFormatter> DATE_FORMAT = new ThreadLocal<DateTimeFormatter>() {
