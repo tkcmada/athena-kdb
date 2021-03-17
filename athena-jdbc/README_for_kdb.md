@@ -51,6 +51,8 @@ MarketBooksNoNull
 t5:([] name:`USDJPY`EURUSD; str:("AAA"; "BBB"); liststr:(enlist "CCC"; ("AAA"; "BBB")) )
 
 t6:([] name_group:`USDJPY`EURUSD )
+
+t7:([] date:(2021.01.10;2021.01.11;2021.01.12;2021.01.13); sym:`USDJPY`USDJPY`USDJPY`USDJPY )
 ```
 
 How to specify JDBC Connection String ?

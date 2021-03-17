@@ -21,6 +21,7 @@ package com.amazonaws.connectors.athena.jdbc.kdb;
 
 import com.amazonaws.athena.connector.lambda.domain.Split;
 import com.amazonaws.athena.connector.lambda.domain.predicate.Constraints;
+import com.amazonaws.athena.connector.lambda.domain.predicate.Marker.Bound;
 import com.amazonaws.athena.connector.lambda.domain.predicate.Range;
 import com.amazonaws.athena.connector.lambda.domain.predicate.SortedRangeSet;
 import com.amazonaws.athena.connector.lambda.domain.predicate.ValueSet;
@@ -534,32 +535,39 @@ public class KdbQueryStringBuilder
                 }
                 else {
                     List<String> rangeConjuncts = new ArrayList<>();
-                    if (!range.getLow().isLowerUnbounded()) {
-                        switch (range.getLow().getBound()) {
-                            case ABOVE:
-                                rangeConjuncts.add(toPredicate(columnName, column, ">", range.getLow().getValue(), type, accumulator));
-                                break;
-                            case EXACTLY:
-                                rangeConjuncts.add(toPredicate(columnName, column, ">=", range.getLow().getValue(), type, accumulator));
-                                break;
-                            case BELOW:
-                                throw new IllegalArgumentException("Low marker should never use BELOW bound");
-                            default:
-                                throw new AssertionError("Unhandled bound: " + range.getLow().getBound());
-                        }
+                    if (!range.getLow().isLowerUnbounded() && range.getLow().getBound() == Bound.EXACTLY && !range.getHigh().isUpperUnbounded() && range.getHigh().getBound() == Bound.EXACTLY) {
+                        //between = within
+                        rangeConjuncts.add(quote(columnName) + " within (" + toLiteral(range.getLow().getValue(), type, columnName, column) + ";" + toLiteral(range.getHigh().getValue(), type, columnName, column) + ")");
                     }
-                    if (!range.getHigh().isUpperUnbounded()) {
-                        switch (range.getHigh().getBound()) {
-                            case ABOVE:
-                                throw new IllegalArgumentException("High marker should never use ABOVE bound");
-                            case EXACTLY:
-                                rangeConjuncts.add(toPredicate(columnName, column, "<=", range.getHigh().getValue(), type, accumulator));
-                                break;
-                            case BELOW:
-                                rangeConjuncts.add(toPredicate(columnName, column, "<", range.getHigh().getValue(), type, accumulator));
-                                break;
-                            default:
-                                throw new AssertionError("Unhandled bound: " + range.getHigh().getBound());
+                    else
+                    {
+                        if (!range.getLow().isLowerUnbounded()) {
+                            switch (range.getLow().getBound()) {
+                                case ABOVE:
+                                    rangeConjuncts.add(toPredicate(columnName, column, ">", range.getLow().getValue(), type, accumulator));
+                                    break;
+                                case EXACTLY:
+                                    rangeConjuncts.add(toPredicate(columnName, column, ">=", range.getLow().getValue(), type, accumulator));
+                                    break;
+                                case BELOW:
+                                    throw new IllegalArgumentException("Low marker should never use BELOW bound");
+                                default:
+                                    throw new AssertionError("Unhandled bound: " + range.getLow().getBound());
+                            }
+                        }
+                        if (!range.getHigh().isUpperUnbounded()) {
+                            switch (range.getHigh().getBound()) {
+                                case ABOVE:
+                                    throw new IllegalArgumentException("High marker should never use ABOVE bound");
+                                case EXACTLY:
+                                    rangeConjuncts.add(toPredicate(columnName, column, "<=", range.getHigh().getValue(), type, accumulator));
+                                    break;
+                                case BELOW:
+                                    rangeConjuncts.add(toPredicate(columnName, column, "<", range.getHigh().getValue(), type, accumulator));
+                                    break;
+                                default:
+                                    throw new AssertionError("Unhandled bound: " + range.getHigh().getBound());
+                            }
                         }
                     }
                     // If rangeConjuncts is null, then the range was ALL, which should already have been checked for
