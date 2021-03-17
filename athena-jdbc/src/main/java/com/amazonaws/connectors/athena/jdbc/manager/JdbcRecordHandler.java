@@ -258,12 +258,9 @@ public abstract class JdbcRecordHandler
                     if (resultSet.getDate(fieldName) != null) {
                         // dst.value = (int) TimeUnit.MILLISECONDS.toDays(resultSet.getDate(fieldName).getTime());
                         java.sql.Date date = resultSet.getDate(fieldName);
-                        LOGGER.info("date field value:" + date + " " + date.getClass().getName());
-                        LOGGER.info("EPOCH = " + EPOCH);
-                        DateTime date2 = new DateTime( ((java.util.Date) date).getTime() );
-                        LOGGER.info("date2 = " + date2);
-                        dst.value = Days.daysBetween(EPOCH, date2).getDays();
-                        LOGGER.info("dst.value=" + dst.value);
+                        org.joda.time.DateTime date2 = new org.joda.time.DateTime( ((java.util.Date) date).getTime() );
+                        dst.value = org.joda.time.Days.daysBetween(EPOCH, date2).getDays();
+                        if(LOGGER.isDebugEnabled()) LOGGER.debug("date field value:" + date + " " + date.getClass().getName() + " EPOCH = " + EPOCH + " date2 = " + date2 + " dst.value=" + dst.value);
                     }
                     dst.isSet = resultSet.wasNull() ? 0 : 1;
                 };
