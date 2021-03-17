@@ -1,0 +1,7 @@
+#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
+#Wed Mar 17 05:32:31 UTC 2021
+aws-athena-federation-sdk-2021.6.1-withdep.jar>=
+aws-athena-federation-sdk-2021.6.1-shaded.jar>=
+aws-athena-federation-sdk-2021.6.1.jar>=
+aws-athena-federation-sdk-2021.6.1-with-arrow.jar>=
+aws-athena-federation-sdk-2021.6.1.pom>=
