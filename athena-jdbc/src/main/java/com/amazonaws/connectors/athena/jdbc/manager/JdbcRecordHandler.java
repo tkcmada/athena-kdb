@@ -127,11 +127,19 @@ public abstract class JdbcRecordHandler
 
         return null;
     }
+    
+    public static class SkipQueryException extends RuntimeException
+    {
+        public SkipQueryException(String message)
+        {
+            super(message);
+        }
+    }
 
     @Override
     public void readWithConstraint(BlockSpiller blockSpiller, ReadRecordsRequest readRecordsRequest, QueryStatusChecker queryStatusChecker)
     {
-        LOGGER.info("{}: Catalog: {}, table {}, splits {}", readRecordsRequest.getQueryId(), readRecordsRequest.getCatalogName(), readRecordsRequest.getTableName(),
+        LOGGER.info("readWithConstraint {}: Catalog: {}, table {}, splits {}", readRecordsRequest.getQueryId(), readRecordsRequest.getCatalogName(), readRecordsRequest.getTableName(),
                 readRecordsRequest.getSplit().getProperties());
         try (Connection connection = this.jdbcConnectionFactory.getConnection(getCredentialProvider())) {
             connection.setAutoCommit(false); // For consistency. This is needed to be false to enable streaming for some database types.
@@ -162,6 +170,10 @@ public abstract class JdbcRecordHandler
                 LOGGER.info("{} rows returned by database.", rowsReturnedFromDatabase);
 
                 connection.commit();
+            }
+            catch(SkipQueryException ex)
+            {
+                LOGGER.info("skipping query {}", ex.getMessage());
             }
         }
         catch (SQLException sqlException) {
