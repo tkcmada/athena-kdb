@@ -118,7 +118,6 @@ public class KdbRecordHandler
         LOGGER.info("constraints:" + (String.valueOf(constraints)));
         LOGGER.info("split:" + (String.valueOf(split)));
         PreparedStatement preparedStatement = jdbcSplitQueryBuilder.buildSql(jdbcConnection, null, tableName.getSchemaName(), tableName.getTableName(), schema, constraints, split);
-LOGGER.info("pstmt:" + String.valueOf(preparedStatement));
         // Disable fetching all rows.
         preparedStatement.setFetchSize(Integer.MIN_VALUE);
 
