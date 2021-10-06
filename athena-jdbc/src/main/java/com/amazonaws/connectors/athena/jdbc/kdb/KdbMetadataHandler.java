@@ -383,6 +383,7 @@ public class KdbMetadataHandler
     @Override
     public Schema getPartitionSchema(final String catalogName)
     {
+        LOGGER.info("getPartitionSchema {}", catalogName);
         SchemaBuilder schemaBuilder = SchemaBuilder.newBuilder()
                 .addField(newField(BLOCK_PARTITION_COLUMN_NAME, Types.MinorType.VARCHAR, KdbTypes.list_of_char_type));
         return schemaBuilder.build();
@@ -391,50 +392,39 @@ public class KdbMetadataHandler
     @Override
     public void getPartitions(final BlockWriter blockWriter, final GetTableLayoutRequest getTableLayoutRequest, QueryStatusChecker queryStatusChecker)
     {
-        LOGGER.info("{}: Schema {}, table {}", getTableLayoutRequest.getQueryId(), getTableLayoutRequest.getTableName().getSchemaName(),
+        LOGGER.info("getPartitions {}: Schema {}, table {}", getTableLayoutRequest.getQueryId(), getTableLayoutRequest.getTableName().getSchemaName(),
                 getTableLayoutRequest.getTableName().getTableName());
-        // try (Connection connection = getJdbcConnectionFactory().getConnection(getCredentialProvider())) {
-        //     final String escape = connection.getMetaData().getSearchStringEscape();
-
-        //     List<String> parameters = Arrays.asList(getTableLayoutRequest.getTableName().getTableName(), getTableLayoutRequest.getTableName().getSchemaName());
-            // try (PreparedStatement preparedStatement = new PreparedStatementBuilder().withConnection(connection).withQuery(GET_PARTITIONS_QUERY).withParameters(parameters).build();
-            //         ResultSet resultSet = preparedStatement.executeQuery()) {
-            //     // Return a single partition if no partitions defined
-            //     if (!resultSet.next()) {
-                    blockWriter.writeRows((Block block, int rowNum) -> {
-                        block.setValue(BLOCK_PARTITION_COLUMN_NAME, rowNum, ALL_PARTITIONS);
-                        LOGGER.info("Adding partition {}", ALL_PARTITIONS);
-                        //we wrote 1 row so we return 1
-                        return 1;
-                    });
-            //     }
-            //     else {
-            //         do {
-            //             final String partitionName = resultSet.getString(PARTITION_COLUMN_NAME);
-
-            //             // 1. Returns all partitions of table, we are not supporting constraints push down to filter partitions.
-            //             // 2. This API is not paginated, we could use order by and limit clause with offsets here.
-            //             blockWriter.writeRows((Block block, int rowNum) -> {
-            //                 block.setValue(BLOCK_PARTITION_COLUMN_NAME, rowNum, partitionName);
-            //                 LOGGER.info("Adding partition {}", partitionName);
-            //                 //we wrote 1 row so we return 1
-            //                 return 1;
-            //             });
-            //         }
-            //         while (resultSet.next() && queryStatusChecker.isQueryRunning());
-            //     }
-            // }
-        // }
-        // catch (SQLException sqlException) {
-        //     throw new RuntimeException(sqlException.getErrorCode() + ": " + sqlException.getMessage(), sqlException);
-        // }
+        LOGGER.info("envvar num_parallel_query={}", System.getenv("num_parallel_query"));
+        int num_parallel_query = 2;
+        try { num_parallel_query = Integer.parseInt(System.getenv("num_parallel_query")); } catch(NumberFormatException ignored) {}
+        LOGGER.info("num_parallel_query={}",num_parallel_query);
+        if(num_parallel_query <= 1) { //single partition
+            blockWriter.writeRows((Block block, int rowNum) -> {
+                block.setValue(BLOCK_PARTITION_COLUMN_NAME, rowNum, ALL_PARTITIONS);
+                LOGGER.info("Single parition. Adding all partition {}", ALL_PARTITIONS);
+                //we wrote 1 row so we return 1
+                return 1;
+            });
+        }
+        else
+        {
+            for(int i = 1; i <= num_parallel_query; i++) {
+                String partitionName = i + "/" + num_parallel_query;
+                blockWriter.writeRows((Block block, int rowNum) -> {
+                    block.setValue(BLOCK_PARTITION_COLUMN_NAME, rowNum, partitionName);
+                    LOGGER.info("Adding partition {}", partitionName);
+                    //we wrote 1 row so we return 1
+                    return 1;
+                });
+            }
+        }
     }
 
     @Override
     public GetSplitsResponse doGetSplits(
             final BlockAllocator blockAllocator, final GetSplitsRequest getSplitsRequest)
     {
-        LOGGER.info("{}: Catalog {}, table {}", getSplitsRequest.getQueryId(), getSplitsRequest.getTableName().getSchemaName(), getSplitsRequest.getTableName().getTableName());
+        LOGGER.info("doGetSplits {}: Catalog {}, table {}", getSplitsRequest.getQueryId(), getSplitsRequest.getTableName().getSchemaName(), getSplitsRequest.getTableName().getTableName());
         int partitionContd = decodeContinuationToken(getSplitsRequest);
         Set<Split> splits = new HashSet<>();
         Block partitions = getSplitsRequest.getPartitions();

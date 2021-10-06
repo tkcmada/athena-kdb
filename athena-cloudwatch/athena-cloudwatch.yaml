@@ -10,7 +10,7 @@ Metadata:
     Labels:
       - athena-federation
     HomePageUrl: 'https://github.com/awslabs/aws-athena-query-federation'
-    SemanticVersion: 2020.18.1
+    SemanticVersion: 2021.6.1
     SourceCodeUrl: 'https://github.com/awslabs/aws-athena-query-federation'
 Parameters:
   AthenaCatalogName:
@@ -63,6 +63,7 @@ Resources:
                 - logs:TestMetricFilter
                 - logs:FilterLogEvents
                 - athena:GetQueryExecution
+                - s3:ListAllMyBuckets
               Effect: Allow
               Resource: '*'
           Version: '2012-10-17'

@@ -71,6 +71,8 @@ public final class DDBTypeUtils
      */
     public static Field inferArrowField(String key, Object value)
     {
+        logger.debug("inferArrowField invoked for key {} of class {}", key,
+                value != null ? value.getClass() : null);
         if (value == null) {
             return null;
         }
@@ -90,14 +92,8 @@ public final class DDBTypeUtils
         else if (value instanceof List || value instanceof Set) {
             Field child = null;
             if (((Collection) value).isEmpty()) {
-                try {
-                    Object subVal = ((Collection) value).getClass()
-                            .getTypeParameters()[0].getGenericDeclaration().newInstance();
-                    child = inferArrowField(key + ".child", subVal);
-                }
-                catch (IllegalAccessException | InstantiationException ex) {
-                    throw new RuntimeException(ex);
-                }
+                logger.warn("Automatic schema inference encountered empty List or Set {}. Unable to determine element types. Falling back to VARCHAR representation", key);
+                child = inferArrowField("", "");
             }
             else {
                 Iterator iterator = ((Collection) value).iterator();
@@ -150,17 +146,39 @@ public final class DDBTypeUtils
 
     /**
      * Converts certain Arrow POJOs to Java POJOs to make downstream conversion easier.
+     * This is called from GetSplits request. Since DDBRecordMetadata object is used for any custom override for
+     * data manipulation/formatting, it does not apply to GetSplits request.
      *
+     * @param columnName column name where the input object comes from
      * @param object the input object
      * @return the converted-to object if convertible, otherwise the original object
      */
-    public static Object convertArrowTypeIfNecessary(Object object)
+    public static Object convertArrowTypeIfNecessary(String columnName, Object object)
+    {
+        return convertArrowTypeIfNecessary(columnName, object, new DDBRecordMetadata(null));
+    }
+
+    /**
+     * Converts certain Arrow POJOs to Java POJOs to make downstream conversion easier.
+     *
+     * @param columnName column name where the input object comes from
+     * @param object the input object
+     * @param recordMetadata metadata object from glue table that contains customer specified information
+     *                       such as desired default timezone, or datetime formats
+     * @return the converted-to object if convertible, otherwise the original object
+     */
+    public static Object convertArrowTypeIfNecessary(String columnName, Object object, DDBRecordMetadata recordMetadata)
     {
         if (object instanceof Text) {
             return object.toString();
         }
         else if (object instanceof LocalDateTime) {
-            return ((LocalDateTime) object).toDateTime(DateTimeZone.UTC).getMillis();
+            String datetimeFormat = recordMetadata.getDateTimeFormat(columnName);
+            DateTimeZone dtz = DateTimeZone.forID(recordMetadata.getDefaultTimeZone().toString());
+            if (datetimeFormat != null) {
+                return ((LocalDateTime) object).toDateTime(dtz).toLocalDateTime().toString(datetimeFormat);
+            }
+            return ((LocalDateTime) object).toDateTime(dtz).getMillis();
         }
         return object;
     }
@@ -201,14 +219,21 @@ public final class DDBTypeUtils
         }
     }
 
+    /**
+     * Coerces the raw value from DynamoDB to normalized type
+     * @param value raw value from DynamoDB
+     * @param field Arrow field from table schema
+     * @param fieldType Corresponding MinorType for field
+     * @param recordMetadata DDBRecordMetadata object containing any metadata that is passed from schema metadata
+     * @return coerced value to normalized type
+     */
     public static Object coerceValueToExpectedType(Object value, Field field,
                                                    Types.MinorType fieldType, DDBRecordMetadata recordMetadata)
     {
-        if (!fieldType.equals(Types.MinorType.DECIMAL) && value instanceof BigDecimal) {
-            value = DDBTypeUtils.coerceDecimalToExpectedType((BigDecimal) value, fieldType);
+        if (!recordMetadata.isContainsCoercibleType()) {
+            return value;
         }
-        else if ((fieldType.equals(Types.MinorType.DATEMILLI) || fieldType.equals(Types.MinorType.DATEDAY))
-                && (value instanceof String || value instanceof BigDecimal)) {
+        if (DDBRecordMetadata.isDateTimeFieldType(fieldType) && (value instanceof String || value instanceof BigDecimal)) {
             String dateTimeFormat = recordMetadata.getDateTimeFormat(field.getName());
             if (value instanceof String && StringUtils.isEmpty(dateTimeFormat)) {
                 logger.info("Date format not in cache for column {}. Trying to infer format...", field.getName());
@@ -218,19 +243,31 @@ public final class DDBTypeUtils
                     recordMetadata.setDateTimeFormat(field.getName(), dateTimeFormat);
                 }
             }
-            value = DDBTypeUtils.coerceDateTimeToExpectedType(value, fieldType,
-                    dateTimeFormat, recordMetadata.getDefaultTimeZone());
+            value = coerceDateTimeToExpectedType(value, fieldType, dateTimeFormat, recordMetadata.getDefaultTimeZone());
+        }
+        else if (value instanceof Number) {
+            // Number conversion from any DDB Numeric type to the correct field numeric type (as specified in schema)
+            value = DDBTypeUtils.coerceNumberToExpectedType((Number) value, fieldType);
         }
         return value;
     }
 
-    private static Object coerceDecimalToExpectedType(BigDecimal value, Types.MinorType fieldType)
+    /**
+     * Converts a numeric value extracted from the DDB record to the correct type (Integer, Long, etc..) expected
+     * by Arrow for the field type.
+     * @param value is the number extracted from the DDB record.
+     * @param fieldType is the Arrow MinorType.
+     * @return the converted value.
+     */
+    private static Object coerceNumberToExpectedType(Number value, Types.MinorType fieldType)
     {
         switch (fieldType) {
             case INT:
-            case TINYINT:
-            case SMALLINT:
                 return value.intValue();
+            case TINYINT:
+                return value.byteValue();
+            case SMALLINT:
+                return value.shortValue();
             case BIGINT:
                 return value.longValue();
             case FLOAT4:
@@ -249,7 +286,9 @@ public final class DDBTypeUtils
             if (value instanceof String) {
                 switch (fieldType) {
                     case DATEMILLI:
-                        return DateTimeFormatterUtil.stringToLocalDateTime((String) value, customerConfiguredFormat, defaultTimeZone);
+                        return DateTimeFormatterUtil.stringToDateTime((String) value, customerConfiguredFormat, defaultTimeZone);
+                    case TIMESTAMPMILLITZ:
+                        return DateTimeFormatterUtil.stringToZonedDateTime((String) value, customerConfiguredFormat, defaultTimeZone);
                     case DATEDAY:
                         return DateTimeFormatterUtil.stringToLocalDate((String) value, customerConfiguredFormat, defaultTimeZone);
                     default:
@@ -272,5 +311,40 @@ public final class DDBTypeUtils
             ex.printStackTrace();
             return value;
         }
+    }
+
+    /**
+     * Converts a Set to a List, and coerces all list items into the correct type. If value is not a Collection, this
+     * method will return a List containing a single item.
+     * @param value is the Set/List of items.
+     * @param field is the LIST field containing a list type in the child field.
+     * @param recordMetadata contains metadata information.
+     * @return a List of coerced values.
+     * @throws RuntimeException when value is instance of Map since a List is expected.
+     */
+    public static List<Object> coerceListToExpectedType(Object value, Field field, DDBRecordMetadata recordMetadata)
+            throws RuntimeException
+    {
+        Field childField = field.getChildren().get(0);
+        Types.MinorType fieldType = Types.getMinorTypeForArrowType(childField.getType());
+
+        if (!(value instanceof Collection)) {
+            if (value instanceof Map) {
+                throw new RuntimeException("Unexpected type (Map) encountered for: " + childField.getName());
+            }
+            return Collections.singletonList(coerceValueToExpectedType(value, childField, fieldType, recordMetadata));
+        }
+
+        List<Object> coercedList = new ArrayList<>();
+        if (fieldType == Types.MinorType.LIST) {
+            // Nested lists: array<array<...>, array<...>, ...>
+            ((Collection<?>) value).forEach(list -> coercedList
+                    .add(coerceListToExpectedType(list, childField, recordMetadata)));
+        }
+        else {
+            ((Collection<?>) value).forEach(item -> coercedList
+                    .add(coerceValueToExpectedType(item, childField, fieldType, recordMetadata)));
+        }
+        return coercedList;
     }
 }
